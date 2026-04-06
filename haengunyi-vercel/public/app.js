@@ -289,8 +289,8 @@ async function resolveSymbol(query) {
     const isKR = sym.endsWith('.KS') || sym.endsWith('.KQ');
     return { symbol: sym, name: m.name, isKorean: isKR };
   }
-  // 최후의 수단: 그냥 전달
-  return { symbol: q, name: q, isKorean: false };
+  // 최후의 수단: 에러
+  throw new Error('"' + q + '" 종목을 찾을 수 없습니다. 종목명 또는 티커를 정확히 입력해주세요.');
 }
 
 // ══════════════════════════════════════
@@ -418,10 +418,10 @@ function parseStockData(bundle) {
     }
 
     if (chart && chart.length > 0) {
-      data.prices = chart.map(c => c.close);
-      data.volumes = chart.map(c => c.volume);
-      data.highs = chart.map(c => c.high);
-      data.lows = chart.map(c => c.low);
+      data.prices = chart.map(c => parseFloat(c.close)).filter(v => !isNaN(v));
+      data.volumes = chart.map(c => parseFloat(c.volume) || 0);
+      data.highs = chart.map(c => parseFloat(c.high)).filter(v => !isNaN(v));
+      data.lows = chart.map(c => parseFloat(c.low)).filter(v => !isNaN(v));
       // Avg volume from last 20 days
       const recentVols = data.volumes.slice(-20);
       data.avgVolume = recentVols.reduce((a, b) => a + b, 0) / recentVols.length;
@@ -465,10 +465,10 @@ function parseStockData(bundle) {
 
     // Price history from Yahoo
     if (data.prices.length === 0 && quotes.close) {
-      data.prices = quotes.close.filter(v => v != null);
-      data.volumes = (quotes.volume || []).filter(v => v != null);
-      data.highs = (quotes.high || []).filter(v => v != null);
-      data.lows = (quotes.low || []).filter(v => v != null);
+      data.prices = quotes.close.filter(v => v != null && !isNaN(v));
+      data.volumes = (quotes.volume || []).filter(v => v != null && !isNaN(v));
+      data.highs = (quotes.high || []).filter(v => v != null && !isNaN(v));
+      data.lows = (quotes.low || []).filter(v => v != null && !isNaN(v));
 
       const recentVols = data.volumes.slice(-20);
       if (recentVols.length > 0) {
@@ -1208,10 +1208,15 @@ stockInput.addEventListener('keydown', (e) => {
   } else if (e.key === 'Enter' && selectedSuggestion >= 0) {
     e.preventDefault();
     const item = items[selectedSuggestion];
+    const sym = item.dataset.symbol;
     const name = item.dataset.name || item.querySelector('.suggestion-name').textContent;
     stockInput.value = name;
     suggestionsDiv.classList.add('hidden');
-    runAnalysis(name);
+    if (sym) {
+      runAnalysisDirect(sym, name);
+    } else {
+      runAnalysis(name);
+    }
   }
 });
 
