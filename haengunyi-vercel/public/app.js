@@ -497,29 +497,62 @@ function calcSMA(prices, period) {
 
 function calcRSI(prices, period = 14) {
   if (prices.length < period + 1) return 50;
-  let gains = 0, losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const diff = prices[i] - prices[i - 1];
-    if (diff >= 0) gains += diff;
-    else losses -= diff;
+  // Wilder's Smoothed RSI (정확한 산업 표준 계산)
+  let avgGain = 0, avgLoss = 0;
+  // 첫 번째 평균: 단순 평균
+  const startIdx = prices.length - Math.min(prices.length - 1, 100); // 최대 100일 사용
+  for (let i = startIdx; i < startIdx + period; i++) {
+    const diff = prices[i + 1] - prices[i];
+    if (diff >= 0) avgGain += diff;
+    else avgLoss -= diff;
   }
-  if (losses === 0) return 100;
-  const rs = (gains / period) / (losses / period);
+  avgGain /= period;
+  avgLoss /= period;
+  // Wilder 평활법 적용
+  for (let i = startIdx + period; i < prices.length - 1; i++) {
+    const diff = prices[i + 1] - prices[i];
+    if (diff >= 0) {
+      avgGain = (avgGain * (period - 1) + diff) / period;
+      avgLoss = (avgLoss * (period - 1)) / period;
+    } else {
+      avgGain = (avgGain * (period - 1)) / period;
+      avgLoss = (avgLoss * (period - 1) + Math.abs(diff)) / period;
+    }
+  }
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
   return 100 - (100 / (1 + rs));
 }
 
 function calcMACD(prices) {
-  if (prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
-  const ema = (arr, p) => {
-    const k = 2 / (p + 1);
-    let e = arr[0];
-    for (let i = 1; i < arr.length; i++) e = arr[i] * k + e * (1 - k);
-    return e;
-  };
-  const ema12 = ema(prices.slice(-26), 12);
-  const ema26 = ema(prices.slice(-26), 26);
-  const macd = ema12 - ema26;
-  return { macd, signal: macd * 0.8, histogram: macd * 0.2 };
+  if (prices.length < 35) return { macd: 0, signal: 0, histogram: 0, trend: 'flat' };
+  // 정확한 EMA 계산 (전체 데이터 사용)
+  function emaCalc(arr, period) {
+    const k = 2 / (period + 1);
+    let ema = arr[0];
+    for (let i = 1; i < arr.length; i++) ema = arr[i] * k + ema * (1 - k);
+    return ema;
+  }
+  // MACD 라인 시리즈 생성 (시그널 계산용)
+  const macdSeries = [];
+  for (let end = 26; end <= prices.length; end++) {
+    const slice = prices.slice(0, end);
+    const e12 = emaCalc(slice, 12);
+    const e26 = emaCalc(slice, 26);
+    macdSeries.push(e12 - e26);
+  }
+  const macdLine = macdSeries[macdSeries.length - 1];
+  // 시그널 라인: MACD 시리즈의 9일 EMA
+  const signalLine = macdSeries.length >= 9 ? emaCalc(macdSeries.slice(-18), 9) : macdLine * 0.8;
+  const histogram = macdLine - signalLine;
+  // 추세 판단
+  const prevHist = macdSeries.length >= 2 ? macdSeries[macdSeries.length - 2] - (macdSeries.length >= 10 ? emaCalc(macdSeries.slice(-19, -1), 9) : macdSeries[macdSeries.length - 2] * 0.8) : 0;
+  let trend = 'flat';
+  if (histogram > 0 && histogram > prevHist) trend = 'bullish';
+  else if (histogram > 0 && histogram <= prevHist) trend = 'weakening';
+  else if (histogram < 0 && histogram < prevHist) trend = 'bearish';
+  else if (histogram < 0 && histogram >= prevHist) trend = 'recovering';
+  return { macd: macdLine, signal: signalLine, histogram, trend };
 }
 
 function calcBollingerBands(prices, period = 20) {
@@ -533,6 +566,30 @@ function calcBollingerBands(prices, period = 20) {
   const current = prices[prices.length - 1];
   const percentB = upper !== lower ? ((current - lower) / (upper - lower)) * 100 : 50;
   return { upper, middle, lower, percentB };
+}
+
+
+function calcStochastic(prices, highs, lows, kPeriod = 14, dPeriod = 3) {
+  if (prices.length < kPeriod || highs.length < kPeriod || lows.length < kPeriod) {
+    return { k: 50, d: 50 };
+  }
+  // %K 시리즈 생성
+  const kSeries = [];
+  for (let i = kPeriod - 1; i < prices.length; i++) {
+    const periodHighs = highs.slice(i - kPeriod + 1, i + 1);
+    const periodLows = lows.slice(i - kPeriod + 1, i + 1);
+    const highest = Math.max(...periodHighs);
+    const lowest = Math.min(...periodLows.filter(v => v > 0));
+    const close = prices[i];
+    const k = highest !== lowest ? ((close - lowest) / (highest - lowest)) * 100 : 50;
+    kSeries.push(k);
+  }
+  // %D = %K의 dPeriod 이동평균
+  const k = kSeries[kSeries.length - 1];
+  const d = kSeries.length >= dPeriod
+    ? kSeries.slice(-dPeriod).reduce((a, b) => a + b, 0) / dPeriod
+    : k;
+  return { k: Math.round(k * 10) / 10, d: Math.round(d * 10) / 10 };
 }
 
 function calcVolatility(prices, period = 20) {
@@ -660,14 +717,43 @@ function calcEntryTiming(data, indicators) {
     }
   }
 
-  // ── 6. MACD 골든크로스/데드크로스 근접 ──
+  // ── 6. MACD 추세 + 골든/데드크로스 ──
   if (macd) {
-    if (macd.histogram > 0 && macd.macd < 0) {
+    if (macd.trend === 'recovering') {
+      score += 10;
+      signals.push({ text: 'MACD 히스토그램 반등 → 하락 둔화, 반전 초기', type: 'positive' });
+    } else if (macd.histogram > 0 && macd.macd < 0) {
       score += 8;
-      signals.push({ text: 'MACD 골든크로스 진행 중 → 상승 전환 시그널', type: 'positive' });
+      signals.push({ text: 'MACD 골든크로스 진행 → 상승 전환 시그널', type: 'positive' });
+    } else if (macd.trend === 'bullish') {
+      score += 3;
+    } else if (macd.trend === 'weakening') {
+      score -= 5;
+      signals.push({ text: 'MACD 모멘텀 약화 → 상승 탄력 둔화', type: 'neutral' });
+    } else if (macd.trend === 'bearish') {
+      score -= 8;
+      signals.push({ text: 'MACD 하락 가속 → 추가 하락 가능', type: 'negative' });
     } else if (macd.histogram < 0 && macd.macd > 0) {
       score -= 6;
-      signals.push({ text: 'MACD 데드크로스 진행 중 → 하락 전환 주의', type: 'negative' });
+      signals.push({ text: 'MACD 데드크로스 진행 → 하락 전환 주의', type: 'negative' });
+    }
+  }
+
+  // ── 6b. 스토캐스틱 오실레이터 ──
+  const stoch = indicators.stoch;
+  if (stoch) {
+    if (stoch.k <= 20 && stoch.d <= 25) {
+      score += 10;
+      signals.push({ text: '스토캐스틱 ' + stoch.k.toFixed(0) + '/' + stoch.d.toFixed(0) + ' 과매도 → 반등 매수 시그널', type: 'positive' });
+    } else if (stoch.k <= 30 && stoch.k > stoch.d) {
+      score += 6;
+      signals.push({ text: '스토캐스틱 골든크로스 (저점) → 매수 신호', type: 'positive' });
+    } else if (stoch.k >= 80 && stoch.d >= 75) {
+      score -= 8;
+      signals.push({ text: '스토캐스틱 ' + stoch.k.toFixed(0) + '/' + stoch.d.toFixed(0) + ' 과매수 → 고점 매수 위험', type: 'negative' });
+    } else if (stoch.k >= 70 && stoch.k < stoch.d) {
+      score -= 5;
+      signals.push({ text: '스토캐스틱 데드크로스 (고점) → 하락 전환 주의', type: 'negative' });
     }
   }
 
@@ -736,7 +822,8 @@ function analyze(data) {
   const volatility = calcVolatility(prices);
   const currentPrice = data.price || (prices.length > 0 ? prices[prices.length - 1] : 0);
 
-  const indicators = { sma5, sma20, sma60, sma120, rsi, macd, bb, volatility, currentPrice };
+  const stoch = calcStochastic(prices, data.highs || prices, data.lows || prices);
+  const indicators = { sma5, sma20, sma60, sma120, rsi, macd, bb, volatility, currentPrice, stoch };
 
   // ── STEP 2: Market phase diagnosis ──
   let phase = 'sideways'; // 상승, 횡보, 하락, 반등
@@ -822,11 +909,18 @@ function analyze(data) {
   else if (rsi < 30) momentumScore += 5; // oversold = potential rebound
   else momentumScore -= 5;
 
-  if (macd.histogram > 0) momentumScore += 10;
+  if (macd.trend === 'bullish') momentumScore += 12;
+  else if (macd.trend === 'recovering') momentumScore += 6;
+  else if (macd.histogram > 0) momentumScore += 8;
+  else if (macd.trend === 'weakening') momentumScore -= 3;
+  else if (macd.trend === 'bearish') momentumScore -= 8;
   else momentumScore -= 5;
 
   if (bb.percentB > 30 && bb.percentB < 70) momentumScore += 5;
   else if (bb.percentB > 90) momentumScore -= 10;
+  // 스토캐스틱 반영
+  if (stoch.k <= 20) momentumScore += 5; // 과매도 = 반등 모멘텀 가능
+  else if (stoch.k >= 80) momentumScore -= 5; // 과매수 = 모멘텀 소진
   scores.momentum = Math.max(0, Math.min(100, momentumScore));
 
   // Supply/Demand Score (Volume)
@@ -1157,12 +1251,14 @@ function renderResults(result) {
     <table class="metrics-table">
       <tr><th>지표</th><th>값</th></tr>
       <tr><td>RSI (14)</td><td>${ind.rsi.toFixed(1)}</td></tr>
-      <tr><td>MACD</td><td>${ind.macd.macd > 0 ? '양(+)' : '음(-)'}</td></tr>
+      <tr><td>MACD / 시그널</td><td>${ind.macd.macd.toFixed(1)} / ${ind.macd.signal.toFixed(1)}</td></tr>
       <tr><td>볼린저 %B</td><td>${ind.bb.percentB.toFixed(1)}%</td></tr>
       ${ind.sma5 ? `<tr><td>5일 이평선</td><td>${formatPrice(ind.sma5)}</td></tr>` : ''}
       ${ind.sma20 ? `<tr><td>20일 이평선</td><td>${formatPrice(ind.sma20)}</td></tr>` : ''}
       ${ind.sma60 ? `<tr><td>60일 이평선</td><td>${formatPrice(ind.sma60)}</td></tr>` : ''}
       <tr><td>연간 변동성</td><td>${ind.volatility.toFixed(1)}%</td></tr>
+      ${ind.stoch ? '<tr><td>스토캐스틱 %K/%D</td><td>' + ind.stoch.k.toFixed(1) + ' / ' + ind.stoch.d.toFixed(1) + '</td></tr>' : ''}
+      <tr><td>MACD 추세</td><td>${ind.macd.trend === 'bullish' ? '🟢 강세' : ind.macd.trend === 'recovering' ? '🔵 회복' : ind.macd.trend === 'weakening' ? '🟡 약화' : ind.macd.trend === 'bearish' ? '🔴 약세' : '⚪ 중립'}</td></tr>
     </table>
   </div>`;
 
@@ -1686,12 +1782,16 @@ async function runTop20Scan() {
     if (i + batchSize < scanList.length) await new Promise(r => setTimeout(r, 100));
   }
 
-  // TSS × ETS 교차 점수 정렬 (종목평가 50% + 진입타이밍 50%)
-  allResults.sort((a, b) => {
+  // TSS ≥ 45 필터 + TSS × ETS 교차 점수 정렬
+  const viableResults = allResults.filter(r => r.tss >= 45);
+  const sortTarget = viableResults.length >= 20 ? viableResults : allResults;
+  sortTarget.sort((a, b) => {
     const scoreA = a.tss * 0.5 + (a.entryTiming ? a.entryTiming.score : 50) * 0.5;
     const scoreB = b.tss * 0.5 + (b.entryTiming ? b.entryTiming.score : 50) * 0.5;
     return scoreB - scoreA;
   });
+  allResults.length = 0;
+  allResults.push(...sortTarget);
   _top20Data = allResults;
 
   renderTop20Results(allResults.slice(0, 20), allResults.length);
@@ -1948,7 +2048,7 @@ const PICK_CANDIDATES = [
 
     card.classList.remove('loading-shimmer');
     inner.innerHTML = `
-      <div class="pick-label">🔥 오늘의 매수 적기 1위</div>
+      <div class="pick-label">${pick.tss >= 65 && pickETS >= 60 ? '🔥 오늘의 매수 적기 1위' : pick.tss >= 50 && pickETS >= 55 ? '🔥 오늘의 주목 종목' : '📊 오늘의 관심 종목'}</div>
       <div class="pick-main">
         <div class="pick-name-row">
           <span class="pick-name">${pick.name}</span>
@@ -1963,6 +2063,7 @@ const PICK_CANDIDATES = [
           <span class="pick-tss-score">${pick.tss}</span>
           <span class="pick-tss-max">/ 100</span>
           <span class="pick-phase">${pick.phaseKR}</span>
+          <span class="pick-note">간편분석</span>
         </div>
         <div class="pick-ets-row">
           <span class="pick-ets-label">진입 타이밍</span>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TSS 분석 방법론 — 행운의서동이</title>
+<title>TSS + ETS 분석 방법론 — 행운의서동이</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -330,14 +330,90 @@ body {
   color: #5a6478;
   border-top: 1px solid #1a2035;
 }
+
+/* ETS Section */
+.ets-indicator-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+@media (max-width: 500px) {
+  .ets-indicator-grid { grid-template-columns: 1fr; }
+}
+.ets-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 18px 16px;
+}
+.ets-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ets-card-icon {
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  border-radius: 8px;
+  font-size: 16px;
+}
+.ets-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+.ets-card-body {
+  font-size: 13px;
+  color: #8892a4;
+  line-height: 1.6;
+}
+.verdict-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+.verdict-table th {
+  text-align: left;
+  padding: 10px 12px;
+  color: #8892a4;
+  font-weight: 600;
+  border-bottom: 1px solid #1a2035;
+  font-size: 12px;
+}
+.verdict-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+}
+.verdict-label {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 13px;
+}
+.verdict-buy { background: #00E08E22; color: #00E08E; }
+.verdict-wait { background: #f0ad4e22; color: #f0ad4e; }
+.verdict-weak { background: #e8783622; color: #e87836; }
+.verdict-avoid { background: #ff4d4d22; color: #ff4d4d; }
+.divider {
+  border: none;
+  border-top: 1px solid #1a2035;
+  margin: 56px 0 0;
+}
 </style>
 </head>
 <body>
 
 <div class="header">
   <div class="header-logo">📈</div>
-  <h1>TSS 분석 방법론</h1>
-  <p>행운의서동이는 어떻게 종목을 분석하는가</p>
+  <h1>TSS + ETS 분석 방법론</h1>
+  <p>행운의서동이는 어떻게 종목을 분석하고 진입 타이밍을 판단하는가</p>
 </div>
 
 <div class="container">
@@ -351,6 +427,7 @@ body {
       감이 아닌 <span class="accent">숫자</span>로 답하기 위해 만들었습니다.
     </p>
     <p style="margin-top:14px;">하나의 종목을 5가지 관점에서 분석하고, 시장 국면에 따라 가중치를 자동 조절한 뒤, 100점 만점의 점수로 환산합니다. 여기에 5가지 안전 필터를 추가로 통과시켜, 숫자만 좋아 보이는 함정 종목을 걸러냅니다.</p>
+    <p style="margin-top:10px;">TSS와 함께 <strong style="color:#4d8cff;">ETS(진입타이밍점수)</strong>를 교차 분석하여, 좋은 종목이라도 이미 많이 올랐다면 "타이밍 대기"를, 주가가 눌린 순간이라면 "지금 진입"을 안내합니다. 아래에서 TSS와 ETS 각각의 상세 방법론을 확인하세요.</p>
   </div>
 
   <!-- 8-STEP FLOW -->
@@ -594,6 +671,152 @@ body {
     </div>
   </div>
 
+  <!-- ETS SECTION -->
+  <hr class="divider">
+
+  <div class="intro-card" style="margin-top:48px; border-color:rgba(77,140,255,0.2); background:linear-gradient(135deg, rgba(77,140,255,0.08), rgba(0,201,255,0.05));">
+    <h2 style="color:#4d8cff;">ETS란?</h2>
+    <p>ETS(Entry Timing Score)는 "이 종목, 지금 들어가도 되는 타이밍인가?"를 판단하는 진입 타이밍 점수입니다.</p>
+    <p class="intro-highlight">
+      TSS가 높아도 이미 오를 대로 올라버린 종목이면 의미 없습니다.<br>
+      ETS는 <span style="color:#4d8cff;">차트를 분석</span>해 지금이 매수하기 좋은 순간인지 판단합니다.
+    </p>
+    <p style="margin-top:14px;">50점을 기준으로 8가지 기술적 시그널을 분석합니다. 눌림목, 과매도, 지지선 근접 등 실전 트레이더들이 주목하는 진입 신호를 감지합니다.</p>
+  </div>
+
+  <!-- ETS INDICATORS -->
+  <div class="section">
+    <span class="section-badge" style="background:#4d8cff22; color:#4d8cff;">ETS SIGNALS</span>
+    <h2>8대 진입 타이밍 시그널</h2>
+    <p>ETS는 기본 50점에서 시작하여, 아래 8가지 시그널의 상태에 따라 가감됩니다.</p>
+
+    <div class="ets-indicator-grid">
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#4d8cff22;">📉</div>
+          <div class="ets-card-title">52주 눌림 (Dip)</div>
+        </div>
+        <div class="ets-card-body">
+          52주 고점 대비 현재가 위치를 측정합니다. 고점에서 40% 이상 하락 시 +15, 30% 이상 +10, 20% 이상 +5. 반대로 고점의 95% 이상이면 -10 (이미 고점 도달).
+        </div>
+      </div>
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#00E08E22;">📊</div>
+          <div class="ets-card-title">RSI 과매도</div>
+        </div>
+        <div class="ets-card-body">
+          Wilder 평활법으로 계산한 14일 RSI를 사용합니다. RSI 30 미만 +15 (극과매도), 40 미만 +10, 45 미만 +5. RSI 75 초과 -10 (과매수 위험).
+        </div>
+      </div>
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#c084fc22;">📐</div>
+          <div class="ets-card-title">볼린저밴드 위치</div>
+        </div>
+        <div class="ets-card-body">
+          현재가가 볼린저밴드 하단 근처인지 측정합니다. %B가 0.1 미만 +12 (하단 이탈 = 반등 기대), 0.25 미만 +6. %B가 0.95 초과 -8 (상단 과열).
+        </div>
+      </div>
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#FFD70022;">🔻</div>
+          <div class="ets-card-title">단기 눌림목</div>
+        </div>
+        <div class="ets-card-body">
+          최근 5일간의 하락폭을 측정합니다. 5일 수익률 -7% 이하 +10 (단기 과매도), -4% 이하 +5. 반대로 +8% 이상 -5 (단기 과열).
+        </div>
+      </div>
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#ff4d4d22;">↕️</div>
+          <div class="ets-card-title">이평선 이격도</div>
+        </div>
+        <div class="ets-card-body">
+          현재가와 20일 이동평균선의 이격률을 측정합니다. 이격률 -8% 이하 +10 (평균 대비 크게 하락), -4% 이하 +5. +10% 이상 -8 (과도한 이격).
+        </div>
+      </div>
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#e8783622;">〰️</div>
+          <div class="ets-card-title">MACD 추세 전환</div>
+        </div>
+        <div class="ets-card-body">
+          MACD 히스토그램의 방향 변화를 감지합니다. 히스토그램이 음수에서 양수로 전환(골든크로스 진입) 시 +12. 반대 전환(데드크로스) 시 -8.
+        </div>
+      </div>
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#00C9FF22;">🔄</div>
+          <div class="ets-card-title">스토캐스틱 (K/D)</div>
+        </div>
+        <div class="ets-card-body">
+          %K(14,3)와 %D(3) 교차를 분석합니다. K가 20 미만에서 D를 상향돌파 시 +12 (강한 반등 신호). K가 80 이상에서 D를 하향돌파 시 -8 (하락 전환 신호).
+        </div>
+      </div>
+      <div class="ets-card">
+        <div class="ets-card-header">
+          <div class="ets-card-icon" style="background:#7dd87d22;">📦</div>
+          <div class="ets-card-title">눌림 구간 거래량</div>
+        </div>
+        <div class="ets-card-body">
+          하락 중 거래량이 줄어들면 매도 압력 소진을 의미합니다. 5일 수익률 음수 + 거래량 평균의 70% 미만 시 +8 (조용한 눌림 = 바닥 근처 신호).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TSS × ETS CROSSOVER -->
+  <div class="section">
+    <span class="section-badge" style="background:#00E08E22; color:#00E08E;">VERDICT</span>
+    <h2>TSS × ETS 교차 판정</h2>
+    <p>행운의서동이는 TSS(종목 품질)와 ETS(진입 타이밍)를 교차 분석하여 최종 투자 판정을 내립니다. 좋은 종목이라도 타이밍이 나쁘면 기다리고, 타이밍이 좋아도 종목이 약하면 경고합니다.</p>
+
+    <table class="verdict-table">
+      <thead>
+        <tr><th>TSS 조건</th><th>ETS 조건</th><th>판정</th><th>의미</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:#fff;">TSS ≥ 65</td>
+          <td style="color:#fff;">ETS ≥ 65</td>
+          <td><span class="verdict-label verdict-buy">적극 매수</span></td>
+          <td style="color:#8892a4;">좋은 종목 + 좋은 타이밍. 지금 들어가기 좋은 구간</td>
+        </tr>
+        <tr>
+          <td style="color:#fff;">TSS ≥ 65</td>
+          <td style="color:#fff;">ETS &lt; 40</td>
+          <td><span class="verdict-label verdict-wait">타이밍 대기</span></td>
+          <td style="color:#8892a4;">좋은 종목이지만 이미 많이 오른 상태. 눌림목 대기</td>
+        </tr>
+        <tr>
+          <td style="color:#fff;">TSS &lt; 50</td>
+          <td style="color:#fff;">ETS ≥ 70</td>
+          <td><span class="verdict-label verdict-weak">저점이나 종목 약함</span></td>
+          <td style="color:#8892a4;">가격은 싼데 근본적으로 약한 종목. 반등 기대 어려움</td>
+        </tr>
+        <tr>
+          <td style="color:#fff;">TSS &lt; 50</td>
+          <td style="color:#fff;">ETS &lt; 40</td>
+          <td><span class="verdict-label verdict-avoid">회피</span></td>
+          <td style="color:#8892a4;">종목도 약하고 타이밍도 나쁨. 투자 회피 권장</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PICK & TOP 20 -->
+  <div class="section">
+    <span class="section-badge" style="background:#c084fc22; color:#c084fc;">RANKING</span>
+    <h2>추천 종목 & TOP 20 선정</h2>
+    <p>오늘의 추천 종목과 TOP 20 랭킹은 TSS와 ETS를 결합하여 선정합니다.</p>
+    <ul style="padding-left:16px; font-size:15px; margin-top:12px;">
+      <li style="margin-bottom:10px;"><strong style="color:#fff;">오늘의 추천:</strong> <span style="color:#4d8cff;">TSS×0.4 + ETS×0.6</span> — 타이밍에 더 큰 비중을 두어, 지금 진입하기 좋은 종목을 우선 추천합니다. TSS 50점 미만 종목은 제외됩니다.</li>
+      <li style="margin-bottom:10px;"><strong style="color:#fff;">TOP 20 랭킹:</strong> <span style="color:#4d8cff;">TSS×0.5 + ETS×0.5</span> — 종목 품질과 타이밍을 균형 있게 평가합니다. TSS 45점 미만 종목은 제외됩니다.</li>
+      <li><strong style="color:#fff;">간편분석 vs 정밀분석:</strong> 추천 카드의 점수는 빠른 간편분석 기준이며, 종목을 클릭하면 1년치 데이터를 분석하는 정밀분석 결과를 확인할 수 있습니다.</li>
+    </ul>
+  </div>
+
   <!-- DATA SOURCE -->
   <div class="section">
     <span class="section-badge" style="background:#8892a422; color:#8892a4;">DATA</span>
@@ -609,7 +832,7 @@ body {
   <!-- CTA -->
   <div class="cta-section">
     <h2>직접 분석해보세요</h2>
-    <p style="color:#8892a4; margin-top:8px;">관심 종목의 TSS 점수를 지금 바로 확인하세요.</p>
+    <p style="color:#8892a4; margin-top:8px;">관심 종목의 TSS + ETS 점수를 지금 바로 확인하세요.</p>
     <a href="/" class="cta-btn">종목 분석하러 가기 →</a>
   </div>
 

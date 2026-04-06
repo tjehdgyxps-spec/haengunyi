@@ -979,6 +979,15 @@ body {
 .pick-ets-grade.ets-bad { background: rgba(249,115,22,0.15); color: #f97316; }
 .pick-ets-grade.ets-danger { background: rgba(239,68,68,0.15); color: #ef4444; }
 
+.pick-note {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: auto;
+}
+
 /* ── TOP 20 테이블 ETS 칼럼 ── */
 .ets-col { text-align: center; min-width: 60px; }
 .ets-badge {
