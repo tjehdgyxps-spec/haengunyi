@@ -1,5 +1,5 @@
 // Vercel Serverless Function — /api/bundle?symbol=005930.KS
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
   } catch (e) {
     res.status(500).json({ error: '서버 오류: ' + e.message });
   }
-}
+};
 
 // ─── Helpers ───
 async function fetchWithTimeout(url, opts = {}) {
@@ -51,7 +51,7 @@ async function fetchWithTimeout(url, opts = {}) {
       }
     });
     clearTimeout(timeout);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     return opts.text ? r.text() : r.json();
   } catch (e) {
     clearTimeout(timeout);
@@ -60,45 +60,47 @@ async function fetchWithTimeout(url, opts = {}) {
 }
 
 async function fetchNaverBasic(code) {
-  try { return await fetchWithTimeout(`https://m.stock.naver.com/api/stock/${code}/basic`); }
-  catch { return null; }
+  try { return await fetchWithTimeout('https://m.stock.naver.com/api/stock/' + code + '/basic'); }
+  catch (e) { return null; }
 }
 
 async function fetchNaverIntegration(code) {
-  try { return await fetchWithTimeout(`https://m.stock.naver.com/api/stock/${code}/integration`); }
-  catch { return null; }
+  try { return await fetchWithTimeout('https://m.stock.naver.com/api/stock/' + code + '/integration'); }
+  catch (e) { return null; }
 }
 
 async function fetchNaverChart(code) {
   try {
-    const end = new Date();
-    const start = new Date();
+    var end = new Date();
+    var start = new Date();
     start.setFullYear(start.getFullYear() - 1);
-    const fmt = d => d.toISOString().slice(0, 10).replace(/-/g, '');
-    const url = `https://api.stock.naver.com/chart/domestic/item/${code}/day?startDateTime=${fmt(start)}&endDateTime=${fmt(end)}`;
-    const data = await fetchWithTimeout(url);
+    var fmt = function(d) { return d.toISOString().slice(0, 10).replace(/-/g, ''); };
+    var url = 'https://api.stock.naver.com/chart/domestic/item/' + code + '/day?startDateTime=' + fmt(start) + '&endDateTime=' + fmt(end);
+    var data = await fetchWithTimeout(url);
     if (Array.isArray(data)) {
-      return data.map(d => ({
-        date: d.localDate,
-        open: d.openPrice,
-        high: d.highPrice,
-        low: d.lowPrice,
-        close: d.closePrice,
-        volume: d.accumulatedTradingVolume || 0
-      }));
+      return data.map(function(d) {
+        return {
+          date: d.localDate,
+          open: d.openPrice,
+          high: d.highPrice,
+          low: d.lowPrice,
+          close: d.closePrice,
+          volume: d.accumulatedTradingVolume || 0
+        };
+      });
     }
     return null;
-  } catch { return null; }
+  } catch (e) { return null; }
 }
 
 async function fetchYahooChart(symbol) {
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d&includePrePost=false`;
+    var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1y&interval=1d&includePrePost=false';
     return await fetchWithTimeout(url);
-  } catch {
+  } catch (e) {
     try {
-      const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d&includePrePost=false`;
+      var url2 = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1y&interval=1d&includePrePost=false';
       return await fetchWithTimeout(url2);
-    } catch { return null; }
+    } catch (e2) { return null; }
   }
 }
