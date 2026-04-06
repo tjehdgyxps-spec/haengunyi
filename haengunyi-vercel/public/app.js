@@ -1069,7 +1069,7 @@ async function _runAnalysisCore(resolved) {
     }
 
     // If name wasn't resolved from DB, update from data
-    if (resolved.name === resolved.symbol || resolved.name === query) {
+    if (!resolved.name || resolved.name === resolved.symbol) {
       resolved.name = data.name;
     }
 
