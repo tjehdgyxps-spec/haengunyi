@@ -423,10 +423,25 @@ function parseStockData(bundle) {
     }
 
     if (!data.price) data.price = meta.regularMarketPrice || 0;
-    if (!data.prevClose) data.prevClose = meta.chartPreviousClose || meta.previousClose || 0;
-    if (!data.change) {
+
+    // 미국 주식: yahooDaily(range=1d)에서 정확한 전일종가 가져오기
+    // range=1y의 chartPreviousClose는 1년전 종가라서 사용하면 안 됨
+    if (bundle.yahooDaily && bundle.yahooDaily.previousClose) {
+      data.prevClose = bundle.yahooDaily.previousClose;
       data.change = data.price - data.prevClose;
       data.changePercent = data.prevClose ? ((data.change / data.prevClose) * 100) : 0;
+    } else if (!data.prevClose) {
+      // fallback: 차트 데이터에서 마지막 2일치로 계산
+      const closes = (result.indicators?.quote?.[0]?.close || []).filter(v => v != null);
+      if (closes.length >= 2) {
+        data.prevClose = closes[closes.length - 2];
+        data.change = data.price - data.prevClose;
+        data.changePercent = data.prevClose ? ((data.change / data.prevClose) * 100) : 0;
+      } else {
+        data.prevClose = meta.chartPreviousClose || 0;
+        data.change = data.price - data.prevClose;
+        data.changePercent = data.prevClose ? ((data.change / data.prevClose) * 100) : 0;
+      }
     }
     if (!data.volume && meta.regularMarketVolume) data.volume = meta.regularMarketVolume;
     data.currency = meta.currency || data.currency;

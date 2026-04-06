@@ -26,8 +26,13 @@ module.exports = async function handler(req, res) {
         return res.status(502).json({ error: '데이터를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.' });
       }
     } else {
-      const yahooChart = await fetchYahooChart(symbol);
+      // US stocks: fetch 1y (for analysis) + 1d (for daily change) in parallel
+      const [yahooChart, yahooDailyChange] = await Promise.all([
+        fetchYahooChart(symbol),
+        fetchYahooDaily(symbol)
+      ]);
       result.yahoo = yahooChart;
+      result.yahooDaily = yahooDailyChange;
       if (!yahooChart) {
         return res.status(502).json({ error: 'Failed to fetch stock data. Please try again.' });
       }
@@ -103,4 +108,22 @@ async function fetchYahooChart(symbol) {
       return await fetchWithTimeout(url2);
     } catch (e2) { return null; }
   }
+}
+
+// 전일대비용 1d 데이터 (미국 주식)
+async function fetchYahooDaily(symbol) {
+  try {
+    var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1d&interval=1d&includePrePost=false';
+    var data = await fetchWithTimeout(url);
+    var meta = data && data.chart && data.chart.result && data.chart.result[0] && data.chart.result[0].meta;
+    if (meta) {
+      return {
+        previousClose: meta.chartPreviousClose || meta.previousClose || 0,
+        price: meta.regularMarketPrice || 0,
+        dayHigh: meta.regularMarketDayHigh || 0,
+        dayLow: meta.regularMarketDayLow || 0
+      };
+    }
+    return null;
+  } catch (e) { return null; }
 }
