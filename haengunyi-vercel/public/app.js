@@ -999,6 +999,10 @@ function showScreen(screen) {
   searchScreen.classList.add('hidden');
   loadingScreen.classList.add('hidden');
   resultsScreen.classList.add('hidden');
+  var s1 = document.getElementById('top20-scan-screen');
+  var s2 = document.getElementById('top20-results-screen');
+  if (s1) s1.classList.add('hidden');
+  if (s2) s2.classList.add('hidden');
   screen.classList.remove('hidden');
   window.scrollTo(0, 0);
 }
