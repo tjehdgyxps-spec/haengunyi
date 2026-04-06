@@ -285,7 +285,9 @@ async function resolveSymbol(query) {
   const naverResults = await searchNaver(q);
   if (naverResults.length > 0) {
     const m = naverResults[0];
-    return { symbol: `${m.code}.${m.market}`, name: m.name, isKorean: true };
+    const sym = m.symbol || `${m.code}.${m.market}`;
+    const isKR = sym.endsWith('.KS') || sym.endsWith('.KQ');
+    return { symbol: sym, name: m.name, isKorean: isKR };
   }
   // 최후의 수단: 그냥 전달
   return { symbol: q, name: q, isKorean: false };
@@ -1040,8 +1042,18 @@ async function animateLoading(name) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Main analysis flow
+// symbol을 이미 알 때 직접 분석 (검색 단계 생략)
+async function runAnalysisDirect(symbol, name) {
+  const isKR = symbol.endsWith('.KS') || symbol.endsWith('.KQ');
+  return _runAnalysisCore({ symbol, name: name || symbol, isKorean: isKR });
+}
+
 async function runAnalysis(query) {
   const resolved = await resolveSymbol(query);
+  return _runAnalysisCore(resolved);
+}
+
+async function _runAnalysisCore(resolved) {
   showScreen(loadingScreen);
 
   // Start animation
@@ -1150,12 +1162,14 @@ stockInput.addEventListener('input', () => {
 });
 
 function showSuggestions(matches) {
-  suggestionsDiv.innerHTML = matches.map(m =>
-    `<div class="suggestion-item" data-name="${m.name}" data-symbol="${m.code}.${m.market}">
+  suggestionsDiv.innerHTML = matches.map(m => {
+    const sym = m.symbol || `${m.code}.${m.market}`;
+    const dispMarket = m.market || '';
+    return `<div class="suggestion-item" data-name="${m.name}" data-symbol="${sym}">
       <span class="suggestion-name">${m.name}</span>
-      <span class="suggestion-code">${m.code}</span>
-    </div>`
-  ).join('');
+      <span class="suggestion-code">${m.code}${dispMarket ? ' · ' + dispMarket : ''}</span>
+    </div>`;
+  }).join('');
   suggestionsDiv.classList.remove('hidden');
   selectedSuggestion = -1;
   bindSuggestionClicks();
@@ -1164,10 +1178,16 @@ function showSuggestions(matches) {
 function bindSuggestionClicks() {
   suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
     item.addEventListener('click', () => {
+      const sym = item.dataset.symbol;
       const name = item.dataset.name || item.querySelector('.suggestion-name').textContent;
       stockInput.value = name;
       suggestionsDiv.classList.add('hidden');
-      runAnalysis(name);
+      // symbol이 있으면 직접 사용 (검색 단계 생략)
+      if (sym) {
+        runAnalysisDirect(sym, name);
+      } else {
+        runAnalysis(name);
+      }
     });
   });
 }
