@@ -1,6 +1,27 @@
 {
+  "headers": [
+    {
+      "source": "/app.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/style.css",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/api/bundle", "destination": "/api/bundle" },
+    { "source": "/api/search", "destination": "/api/search" },
     { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
