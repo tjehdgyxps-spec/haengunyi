@@ -1164,3 +1164,24 @@ document.addEventListener('click', (e) => {
 
 // Focus input on page load
 stockInput.focus();
+
+// ══════════════════════════════════════
+// VISITOR COUNTER (counterapi.dev)
+// ══════════════════════════════════════
+(async function initVisitorCounter() {
+  try {
+    const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const key = `visit${today}`;
+    const res = await fetch(`https://api.counterapi.dev/v1/power-seodong/${key}/up`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const count = data.count || data.value || 0;
+    if (count > 0) {
+      const html = `<span class="dot"></span>오늘 ${count.toLocaleString()}명 방문`;
+      document.querySelectorAll('.visitor-count').forEach(el => {
+        el.innerHTML = html;
+        el.classList.add('active');
+      });
+    }
+  } catch(e) { /* silent fail */ }
+})();

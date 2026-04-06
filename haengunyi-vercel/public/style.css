@@ -326,3 +326,28 @@ body {
 /* Skeleton pulse for loading */
 @keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
 .loading-container { animation: pulse 1.5s ease-in-out infinite; }
+
+/* ─── VISITOR COUNTER ─── */
+.visitor-count {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(0,224,142,0.08);
+  border: 1px solid rgba(0,224,142,0.2);
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  display: none;
+}
+.visitor-count.active {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.visitor-count .dot {
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: blink 1.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
