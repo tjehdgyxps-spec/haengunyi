@@ -1570,3 +1570,174 @@ document.getElementById('top20-results-back-btn').addEventListener('click', () =
   showScreen(searchScreen);
 });
 document.getElementById('top20-refresh-btn').addEventListener('click', () => runTop20Scan());
+
+// ══════════════════════════════════════
+// 12. 오늘의 추천 1위 (첫 화면 자동 로딩)
+// ══════════════════════════════════════
+
+// 핵심 대형주 후보 (빠르게 스캔해서 1위 선정)
+const PICK_CANDIDATES = [
+  { name: '삼성전자', code: '005930', market: 'KS' },
+  { name: 'SK하이닉스', code: '000660', market: 'KS' },
+  { name: '현대차', code: '005380', market: 'KS' },
+  { name: 'NAVER', code: '035420', market: 'KS' },
+  { name: '카카오', code: '035720', market: 'KS' },
+  { name: '셀트리온', code: '068270', market: 'KS' },
+  { name: 'LG에너지솔루션', code: '373220', market: 'KS' },
+  { name: '삼성SDI', code: '006400', market: 'KS' },
+  { name: '기아', code: '000270', market: 'KS' },
+  { name: 'KB금융', code: '105560', market: 'KS' },
+  { name: '신한지주', code: '055550', market: 'KS' },
+  { name: 'KT', code: '030200', market: 'KS' },
+  { name: 'KT&G', code: '033780', market: 'KS' },
+  { name: '한화에어로스페이스', code: '012450', market: 'KS' },
+  { name: 'HD현대중공업', code: '329180', market: 'KS' },
+  { name: 'POSCO홀딩스', code: '005490', market: 'KS' },
+  { name: '하나금융지주', code: '086790', market: 'KS' },
+  { name: '크래프톤', code: '259960', market: 'KS' },
+  { name: '두산에너빌리티', code: '034020', market: 'KS' },
+  { name: 'LG전자', code: '066570', market: 'KS' },
+  { name: 'SK텔레콤', code: '017670', market: 'KS' },
+  { name: '삼성바이오로직스', code: '207940', market: 'KS' },
+  { name: '현대모비스', code: '012330', market: 'KS' },
+  { name: '한국전력', code: '015760', market: 'KS' },
+  { name: 'HLB', code: '028300', market: 'KS' },
+  { name: '에코프로비엠', code: '247540', market: 'KS' },
+  { name: '오리온', code: '271560', market: 'KS' },
+  { name: 'BGF리테일', code: '282330', market: 'KS' },
+  { name: 'LG화학', code: '051910', market: 'KS' },
+  { name: '삼성물산', code: '028260', market: 'KS' }
+];
+
+(async function loadTodayPick() {
+  const card = document.getElementById('today-pick-card');
+  const inner = document.getElementById('today-pick-inner');
+  if (!card || !inner) return;
+
+  try {
+    // 30개 후보를 6개씩 병렬로 빠르게 스캔
+    const allResults = [];
+    const batchSize = 6;
+
+    for (let i = 0; i < PICK_CANDIDATES.length; i += batchSize) {
+      const batch = PICK_CANDIDATES.slice(i, i + batchSize);
+      const batchResults = await Promise.all(
+        batch.map(s => fetchQuickScan(s.code).catch(() => null))
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const scan = batchResults[j];
+        if (!scan || scan.error) continue;
+        const stock = batch[j];
+        try {
+          const data = parseScanData(scan, stock);
+          if (data.price > 0 && data.prices.length >= 20) {
+            const result = analyze(data);
+            allResults.push({
+              name: scan.name || stock.name,
+              code: stock.code,
+              market: stock.market,
+              symbol: stock.code + '.' + stock.market,
+              price: data.price,
+              change: data.change,
+              changePercent: data.changePercent,
+              tss: result.tss,
+              grade: result.grade,
+              gradeClass: result.gradeClass,
+              phaseKR: result.phaseKR,
+              verdictTitle: result.verdictTitle,
+              scores: result.scores,
+              indicators: result.indicators,
+              per: data.per,
+              pbr: data.pbr,
+              volume: data.volume,
+              avgVolume: data.avgVolume,
+              high52w: data.high52w,
+              low52w: data.low52w
+            });
+          }
+        } catch (e) { /* skip */ }
+      }
+    }
+
+    if (allResults.length === 0) {
+      inner.innerHTML = '<div class="today-pick-loading">데이터를 불러오는 중...</div>';
+      return;
+    }
+
+    // TSS 1위 선정
+    allResults.sort((a, b) => b.tss - a.tss);
+    const pick = allResults[0];
+
+    // 왜 좋은지 요약 생성
+    const reasons = [];
+    if (pick.scores.technical >= 70) reasons.push('이동평균선 정배열 — 기술적 위치 양호');
+    else if (pick.scores.technical >= 60) reasons.push('주요 이평선 위에 위치 — 추세 유지 중');
+    if (pick.scores.momentum >= 65) reasons.push('RSI·MACD 모멘텀 강세 신호 감지');
+    if (pick.scores.supply >= 65) reasons.push('거래량 증가와 상승 동반 — 수급 유입 확인');
+    if (pick.scores.value >= 65) reasons.push('PER·PBR 기준 저평가 구간');
+    if (pick.scores.growth >= 65) reasons.push('최근 60일 수익률 양호 — 성장세 지속');
+    if (pick.changePercent > 0) reasons.push(`전일대비 +${pick.changePercent.toFixed(2)}% 상승 마감`);
+    if (reasons.length === 0) reasons.push('5대 지표 종합 점수 최상위');
+
+    // 신뢰 지표
+    const trustBadges = [];
+    if (pick.high52w > 0 && pick.low52w > 0) {
+      const pos = ((pick.price - pick.low52w) / (pick.high52w - pick.low52w) * 100).toFixed(0);
+      trustBadges.push(`52주 위치 ${pos}%`);
+    }
+    if (pick.volume > 0 && pick.avgVolume > 0) {
+      const volR = (pick.volume / pick.avgVolume).toFixed(1);
+      if (volR > 1) trustBadges.push(`거래량 평균 대비 ${volR}배`);
+    }
+    if (pick.per > 0) trustBadges.push(`PER ${pick.per.toFixed(1)}배`);
+
+    const changeClass = pick.change >= 0 ? 'up' : 'down';
+    const changeSign = pick.change >= 0 ? '+' : '';
+    const priceStr = '₩' + Math.round(pick.price).toLocaleString();
+
+    card.classList.remove('loading-shimmer');
+    inner.innerHTML = `
+      <div class="pick-label">🔥 오늘의 추천 1위</div>
+      <div class="pick-main">
+        <div class="pick-name-row">
+          <span class="pick-name">${pick.name}</span>
+          <span class="pick-grade ${pick.gradeClass}">${pick.grade}등급</span>
+        </div>
+        <div class="pick-price-row">
+          <span class="pick-price">${priceStr}</span>
+          <span class="pick-change ${changeClass}">${changeSign}${pick.changePercent.toFixed(2)}%</span>
+        </div>
+        <div class="pick-tss-row">
+          <span class="pick-tss-label">TSS</span>
+          <span class="pick-tss-score">${pick.tss}</span>
+          <span class="pick-tss-max">/ 100</span>
+          <span class="pick-phase">${pick.phaseKR}</span>
+        </div>
+      </div>
+      <div class="pick-reasons">
+        ${reasons.slice(0, 3).map(r => `<div class="pick-reason">✔ ${r}</div>`).join('')}
+      </div>
+      ${trustBadges.length > 0 ? `
+      <div class="pick-trust">
+        ${trustBadges.map(b => `<span class="trust-badge">${b}</span>`).join('')}
+      </div>` : ''}
+      <div class="pick-cta">
+        <button class="pick-analyze-btn" data-symbol="${pick.symbol}" data-name="${pick.name}">상세 분석 보기 →</button>
+      </div>
+    `;
+
+    // 카드 클릭 → 상세 분석
+    inner.querySelector('.pick-analyze-btn').addEventListener('click', function() {
+      const sym = this.dataset.symbol;
+      const name = this.dataset.name;
+      stockInput.value = name;
+      runAnalysisDirect(sym, name);
+    });
+
+  } catch (e) {
+    console.error('Today pick error:', e);
+    inner.innerHTML = '<div class="today-pick-loading">추천 종목을 불러오지 못했습니다.</div>';
+    card.classList.remove('loading-shimmer');
+  }
+})();
