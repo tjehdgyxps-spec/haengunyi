@@ -1902,13 +1902,16 @@ const PICK_CANDIDATES = [
       return;
     }
 
+    // TSS ≥ 50 (C등급 이상) 필터 → 약한 종목은 타이밍이 좋아도 추천 제외
+    const qualified = allResults.filter(a => a.tss >= 50);
+    const pickPool = qualified.length > 0 ? qualified : allResults;
     // TSS × ETS 교차 점수로 정렬 — 좋은 종목 + 좋은 타이밍
-    allResults.sort((a, b) => {
+    pickPool.sort((a, b) => {
       const scoreA = a.tss * 0.4 + (a.entryTiming ? a.entryTiming.score : 50) * 0.6;
       const scoreB = b.tss * 0.4 + (b.entryTiming ? b.entryTiming.score : 50) * 0.6;
       return scoreB - scoreA;
     });
-    const pick = allResults[0];
+    const pick = pickPool[0];
     const pickETS = pick.entryTiming ? pick.entryTiming.score : 0;
 
     // 왜 좋은지 + 왜 지금인지 요약 생성
