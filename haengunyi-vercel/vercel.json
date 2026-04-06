@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/bundle", "destination": "/api/bundle" },
+    { "source": "/(.*)", "destination": "/public/$1" }
+  ]
+}

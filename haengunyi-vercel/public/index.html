@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>행운의서동이 — AI 종목 분석</title>
+<meta name="description" content="실시간 데이터 기반 8단계 종목 분석. TSS 스코어링으로 매수 타이밍 판단.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2300E08E'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23000'>📈</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- ─── SEARCH SCREEN ─── -->
+<div id="search-screen" class="screen">
+  <nav class="top-bar"><span></span><span class="logo-text"><span class="logo-icon">📈</span> 행운의서동이</span></nav>
+  <div class="search-container">
+    <div class="hero-logo">
+      <svg viewBox="0 0 48 48" width="64" height="64"><rect width="48" height="48" rx="12" fill="#00E08E"/><polyline points="12,32 20,22 28,28 36,16" stroke="#000" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="36" cy="16" r="2.5" fill="#000"/></svg>
+    </div>
+    <h1 class="hero-title">행운의서동이</h1>
+    <p class="hero-subtitle">AI 종목 분석 엔진</p>
+    <div class="search-box-wrapper">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="stock-input" placeholder="종목명 또는 티커를 입력하세요" autocomplete="off">
+        <button id="search-btn">분석 →</button>
+      </div>
+      <div id="suggestions" class="suggestions hidden"></div>
+    </div>
+    <div class="quick-tags">
+      <span class="quick-tags-label">인기 종목</span>
+      <div class="tags-row">
+        <button class="quick-tag" data-symbol="005930.KS">삼성전자</button>
+        <button class="quick-tag" data-symbol="000660.KS">SK하이닉스</button>
+        <button class="quick-tag" data-symbol="035420.KS">NAVER</button>
+        <button class="quick-tag" data-symbol="035720.KS">카카오</button>
+        <button class="quick-tag" data-symbol="005380.KS">현대차</button>
+        <button class="quick-tag" data-symbol="068270.KS">셀트리온</button>
+        <button class="quick-tag" data-symbol="AAPL">Apple</button>
+        <button class="quick-tag" data-symbol="NVDA">NVIDIA</button>
+        <button class="quick-tag" data-symbol="TSLA">Tesla</button>
+      </div>
+    </div>
+    <p class="disclaimer">본 분석은 투자 참고용이며, 투자 판단의 책임은 본인에게 있습니다.</p>
+  </div>
+</div>
+
+<!-- ─── LOADING SCREEN ─── -->
+<div id="loading-screen" class="screen hidden">
+  <nav class="top-bar"><span></span><span class="logo-text"><span class="logo-icon">📈</span> 행운의서동이</span></nav>
+  <div class="loading-container">
+    <div id="loading-stock-name" class="loading-name">분석 중...</div>
+    <div class="progress-track"><div id="progress-bar" class="progress-fill"></div></div>
+    <div class="load-steps">
+      <div class="load-step">시장 데이터 수집</div>
+      <div class="load-step">펀더멘탈 분석</div>
+      <div class="load-step">기술적 분석</div>
+      <div class="load-step">매크로 진단</div>
+      <div class="load-step">TSS 산출</div>
+      <div class="load-step">리포트 생성</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── RESULTS SCREEN ─── -->
+<div id="results-screen" class="screen hidden">
+  <nav class="top-bar">
+    <button id="back-btn" class="back-btn">← 새 분석</button>
+    <span class="logo-text"><span class="logo-icon">📈</span> 행운의서동이</span>
+  </nav>
+  <div id="results-content" class="results-content"></div>
+</div>
+
+<!-- ─── ERROR OVERLAY ─── -->
+<div id="error-overlay" class="error-overlay hidden">
+  <div class="error-box">
+    <div class="error-icon">⚠</div>
+    <div id="error-message" class="error-msg"></div>
+    <button id="error-close-btn" class="error-close">확인</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
