@@ -305,6 +305,13 @@ body {
   .score-label { flex:0 0 64px; font-size:12px; }
 }
 
+/* ─── AD BANNER ─── */
+.ad-banner {
+  width:100%; max-width:680px; margin:24px auto 0;
+  display:flex; justify-content:center;
+  overflow:hidden; border-radius:10px;
+}
+
 /* ─── ANIMATIONS ─── */
 @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 .analysis-card { animation: fadeIn 0.3s ease both; }
