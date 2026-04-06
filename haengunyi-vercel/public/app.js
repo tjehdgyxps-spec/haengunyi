@@ -546,6 +546,178 @@ function calcVolatility(prices, period = 20) {
   return Math.sqrt(variance) * Math.sqrt(252) * 100; // annualized %
 }
 
+
+// ══════════════════════════════════════
+// 5b. ENTRY TIMING SCORE (ETS) ENGINE
+// ══════════════════════════════════════
+function calcEntryTiming(data, indicators) {
+  const { rsi, bb, sma5, sma20, sma60, sma120, currentPrice, volatility, macd } = indicators;
+  const prices = data.prices;
+  let score = 50;
+  const signals = [];
+
+  // ── 1. 52주 고점 대비 눌림 정도 ──
+  if (data.high52w > 0 && data.low52w > 0) {
+    const fromHigh = ((data.high52w - currentPrice) / data.high52w) * 100;
+    const range52 = (currentPrice - data.low52w) / (data.high52w - data.low52w) * 100;
+    if (fromHigh >= 15 && fromHigh <= 30) {
+      score += 15;
+      signals.push({ text: '52주 고점 대비 ' + fromHigh.toFixed(0) + '% 눌림 → 저가 매수 구간', type: 'positive' });
+    } else if (fromHigh >= 8 && fromHigh < 15) {
+      score += 8;
+      signals.push({ text: '52주 고점 대비 ' + fromHigh.toFixed(0) + '% 조정 → 진입 가능', type: 'positive' });
+    } else if (fromHigh > 30 && fromHigh <= 45) {
+      score += 5;
+      signals.push({ text: '52주 고점 대비 ' + fromHigh.toFixed(0) + '% 하락 → 저가이나 리스크 동반', type: 'neutral' });
+    } else if (fromHigh > 45) {
+      score -= 8;
+      signals.push({ text: '52주 고점 대비 ' + fromHigh.toFixed(0) + '% 급락 → 구조적 하락 의심', type: 'negative' });
+    } else if (fromHigh < 3) {
+      score -= 15;
+      signals.push({ text: '52주 신고가 근접 → 고점 추격 매수 위험', type: 'negative' });
+    } else {
+      // 3~8% — mild
+      score += 2;
+    }
+  }
+
+  // ── 2. RSI 과매도/과매수 ──
+  if (rsi <= 25) {
+    score += 18;
+    signals.push({ text: 'RSI ' + rsi.toFixed(0) + ' 극단적 과매도 → 강한 반등 매수 시그널', type: 'positive' });
+  } else if (rsi <= 35) {
+    score += 14;
+    signals.push({ text: 'RSI ' + rsi.toFixed(0) + ' 과매도 구간 → 매수 유리', type: 'positive' });
+  } else if (rsi <= 45) {
+    score += 8;
+    signals.push({ text: 'RSI ' + rsi.toFixed(0) + ' 중립 하단 → 진입 적정', type: 'neutral' });
+  } else if (rsi <= 55) {
+    score += 2;
+  } else if (rsi <= 65) {
+    score -= 3;
+  } else if (rsi <= 75) {
+    score -= 10;
+    signals.push({ text: 'RSI ' + rsi.toFixed(0) + ' 과매수 접근 → 진입 시 고점 물릴 위험', type: 'negative' });
+  } else {
+    score -= 18;
+    signals.push({ text: 'RSI ' + rsi.toFixed(0) + ' 극단 과매수 → 절대 진입 금지 구간', type: 'negative' });
+  }
+
+  // ── 3. 볼린저밴드 위치 ──
+  if (bb.percentB <= 10) {
+    score += 15;
+    signals.push({ text: '볼린저밴드 하단 이탈 → 반등 매수 시그널', type: 'positive' });
+  } else if (bb.percentB <= 25) {
+    score += 10;
+    signals.push({ text: '볼린저밴드 하단 근접 → 저가 매수 구간', type: 'positive' });
+  } else if (bb.percentB >= 90) {
+    score -= 13;
+    signals.push({ text: '볼린저밴드 상단 이탈 → 과열, 진입 위험', type: 'negative' });
+  } else if (bb.percentB >= 75) {
+    score -= 6;
+    signals.push({ text: '볼린저밴드 상단 접근 → 단기 부담', type: 'negative' });
+  }
+
+  // ── 4. 단기 눌림목 (5일 수익률) ──
+  if (prices.length >= 5) {
+    const p5ago = prices[prices.length - 5];
+    const ret5 = p5ago > 0 ? ((currentPrice - p5ago) / p5ago) * 100 : 0;
+    const aboveLongMA = sma120 ? currentPrice > sma120 : (sma60 ? currentPrice > sma60 : false);
+
+    if (ret5 <= -5 && ret5 > -12 && aboveLongMA) {
+      score += 14;
+      signals.push({ text: '5일간 ' + ret5.toFixed(1) + '% 눌림 (장기추세↑ 유지) → 매수 적기', type: 'positive' });
+    } else if (ret5 <= -3 && ret5 > -5 && aboveLongMA) {
+      score += 8;
+      signals.push({ text: '5일간 ' + ret5.toFixed(1) + '% 소폭 눌림 → 진입 양호', type: 'positive' });
+    } else if (ret5 <= -12) {
+      score -= 5;
+      signals.push({ text: '5일간 ' + ret5.toFixed(1) + '% 급락 → 패닉 구간, 신중', type: 'negative' });
+    } else if (ret5 >= 8) {
+      score -= 14;
+      signals.push({ text: '5일간 +' + ret5.toFixed(1) + '% 급등 → 단기 과열, 진입 불리', type: 'negative' });
+    } else if (ret5 >= 4) {
+      score -= 6;
+      signals.push({ text: '5일간 +' + ret5.toFixed(1) + '% 상승 → 이미 올라, 소폭 부담', type: 'negative' });
+    }
+  }
+
+  // ── 5. 20일 이평선 이격도 ──
+  if (sma20 && currentPrice > 0) {
+    const dev = ((currentPrice - sma20) / sma20) * 100;
+    if (dev <= -8 && dev > -20) {
+      score += 10;
+      signals.push({ text: '20일선 대비 ' + dev.toFixed(1) + '% 이격 → 복귀 매수 기회', type: 'positive' });
+    } else if (dev <= -3 && dev > -8) {
+      score += 5;
+      signals.push({ text: '20일선 살짝 아래 → 평균 복귀 기대', type: 'neutral' });
+    } else if (dev >= 10) {
+      score -= 10;
+      signals.push({ text: '20일선 대비 +' + dev.toFixed(1) + '% 과이격 → 평균회귀 하락 위험', type: 'negative' });
+    } else if (dev >= 5) {
+      score -= 4;
+      signals.push({ text: '20일선 위 ' + dev.toFixed(1) + '% → 소폭 과열', type: 'neutral' });
+    }
+  }
+
+  // ── 6. MACD 골든크로스/데드크로스 근접 ──
+  if (macd) {
+    if (macd.histogram > 0 && macd.macd < 0) {
+      score += 8;
+      signals.push({ text: 'MACD 골든크로스 진행 중 → 상승 전환 시그널', type: 'positive' });
+    } else if (macd.histogram < 0 && macd.macd > 0) {
+      score -= 6;
+      signals.push({ text: 'MACD 데드크로스 진행 중 → 하락 전환 주의', type: 'negative' });
+    }
+  }
+
+  // ── 7. 거래량 분석 (하락 시 거래량 체크) ──
+  if (prices.length >= 25 && data.volumes && data.volumes.length >= 25) {
+    const recentRet = currentPrice - prices[prices.length - 5];
+    if (recentRet < 0) {
+      const recentAvgVol = data.volumes.slice(-5).reduce((a,b) => a+b, 0) / 5;
+      const prevAvgVol = data.volumes.slice(-25, -5).reduce((a,b) => a+b, 0) / 20;
+      if (prevAvgVol > 0) {
+        const volR = recentAvgVol / prevAvgVol;
+        if (volR < 0.7) {
+          score += 6;
+          signals.push({ text: '하락 시 거래량 감소 → 매도 압력 약함 (건전한 조정)', type: 'positive' });
+        } else if (volR > 2.5) {
+          score -= 6;
+          signals.push({ text: '하락 시 거래량 폭증 → 투매 가능성', type: 'negative' });
+        }
+      }
+    }
+  }
+
+  const ets = Math.max(0, Math.min(100, Math.round(score)));
+
+  let etsGrade, etsClass, etsDesc;
+  if (ets >= 75) {
+    etsGrade = '매수 적기';
+    etsClass = 'ets-buy';
+    etsDesc = '차트 지표가 매수에 매우 유리한 구간입니다. 분할 진입을 적극 고려하세요.';
+  } else if (ets >= 60) {
+    etsGrade = '진입 양호';
+    etsClass = 'ets-good';
+    etsDesc = '무난한 진입 구간입니다. 소량 매수 후 추가 매수 전략을 권합니다.';
+  } else if (ets >= 45) {
+    etsGrade = '중립';
+    etsClass = 'ets-neutral';
+    etsDesc = '뚜렷한 매수 시그널이 부족합니다. 눌림을 기다리거나 관망하세요.';
+  } else if (ets >= 30) {
+    etsGrade = '진입 불리';
+    etsClass = 'ets-bad';
+    etsDesc = '단기 과열 또는 하락 모멘텀 구간입니다. 지금 사면 고점에 물릴 수 있습니다.';
+  } else {
+    etsGrade = '진입 위험';
+    etsClass = 'ets-danger';
+    etsDesc = '지금 매수는 높은 위험을 수반합니다. 확실한 반전 신호를 확인한 후 진입하세요.';
+  }
+
+  return { score: ets, grade: etsGrade, gradeClass: etsClass, desc: etsDesc, signals };
+}
+
 // ══════════════════════════════════════
 // 6. 8-STEP ANALYSIS FRAMEWORK
 // ══════════════════════════════════════
@@ -682,6 +854,9 @@ function analyze(data) {
   else if (volatility > 50) techScore -= 10; // very volatile
   scores.technical = Math.max(0, Math.min(100, techScore));
 
+  // ── STEP 4b: Entry Timing Score ──
+  const entryTiming = calcEntryTiming(data, indicators);
+
   // ── STEP 5: TSS Calculation ──
   const totalWeight = weights.value + weights.growth + weights.momentum + weights.supply + weights.technical;
   const tss = (
@@ -748,36 +923,54 @@ function analyze(data) {
 
   const failedFilters = filters.filter(f => !f.pass).length;
 
-  // ── STEP 7: Verdict ──
+  // ── STEP 7: Verdict (TSS × ETS 교차 판단) ──
+  const ets = entryTiming.score;
   let verdict, verdictClass, verdictTitle, verdictReason;
+
   if (failedFilters >= 3) {
     verdict = 'avoid'; verdictClass = 'avoid';
-    verdictTitle = '⚠️ 매매 회피 권고';
+    verdictTitle = '🚫 매매 회피 권고';
     verdictReason = `경고 필터 ${failedFilters}개 작동. 현재 진입은 위험합니다. 안정화 이후 재검토를 권합니다.`;
   } else if (failedFilters >= 2) {
     verdict = 'wait'; verdictClass = 'wait';
     verdictTitle = '⏸ 관망 권고';
     verdictReason = `경고 필터 ${failedFilters}개 감지. 추가 하락 가능성이 있어 관망을 권합니다.`;
-  } else if (tssRounded >= 70) {
+  } else if (tssRounded >= 65 && ets >= 65) {
+    verdict = 'buy'; verdictClass = 'buy';
+    verdictTitle = '🟢 적극 매수 — 종목 우수 + 타이밍 양호';
+    verdictReason = `종목 평가 ${tssRounded}점(${grade}등급) + 진입 타이밍 ${ets}점. 펀더멘탈과 차트 모두 매수에 유리합니다. 분할 매수를 적극 고려하세요.`;
+  } else if (tssRounded >= 60 && ets >= 55) {
     verdict = 'buy'; verdictClass = 'buy';
     verdictTitle = '✅ 매수 추천';
-    verdictReason = `TSS ${tssRounded}점 (${grade}등급). 기술적·펀더멘탈 지표가 양호합니다. 분할 매수를 고려하세요.`;
-  } else if (tssRounded >= 55) {
+    verdictReason = `종목 평가 ${tssRounded}점(${grade}등급), 진입 타이밍 ${ets}점. 양호한 진입 구간입니다. 소량부터 분할 매수를 시작하세요.`;
+  } else if (tssRounded >= 65 && ets < 40) {
+    verdict = 'wait'; verdictClass = 'wait';
+    verdictTitle = '⏸ 좋은 종목, 타이밍 대기';
+    verdictReason = `종목 자체는 우수(TSS ${tssRounded}점)하나, 진입 타이밍이 불리합니다(ETS ${ets}점). 이미 많이 올랐을 가능성이 높습니다. 눌림목을 기다리세요.`;
+  } else if (tssRounded >= 55 && ets >= 65) {
+    verdict = 'buy'; verdictClass = 'buy';
+    verdictTitle = '✅ 타이밍 매수 — 눌림목 진입 기회';
+    verdictReason = `종목 평가 보통(TSS ${tssRounded}점)이나, 차트가 매수 적기를 가리킵니다(ETS ${ets}점). 눌림목 반등을 노린 소량 진입을 고려하세요.`;
+  } else if (tssRounded >= 55 && ets >= 45) {
     verdict = 'hold'; verdictClass = 'hold';
-    verdictTitle = '📊 보유 / 소량 매수';
-    verdictReason = `TSS ${tssRounded}점 (${grade}등급). 보유 중이라면 유지, 신규 진입은 소량으로 시작하세요.`;
-  } else if (tssRounded >= 40) {
+    verdictTitle = '📊 보유 유지 / 소량 매수';
+    verdictReason = `TSS ${tssRounded}점, ETS ${ets}점. 보유 중이라면 유지하되, 신규 진입은 소량으로만.`;
+  } else if (tssRounded < 40) {
+    verdict = 'avoid'; verdictClass = 'avoid';
+    verdictTitle = '🚫 매도 / 회피 권고';
+    verdictReason = `TSS ${tssRounded}점(${grade}등급). 종목 자체가 약합니다. 보유 중이라면 비중 축소를 검토하세요.`;
+  } else if (tssRounded < 50 && ets >= 70) {
+    verdict = 'wait'; verdictClass = 'wait';
+    verdictTitle = '⏸ 저점이나 종목 약함';
+    verdictReason = `차트상 저점 구간(ETS ${ets}점)이나, 종목 자체가 약합니다(TSS ${tssRounded}점). 펀더멘탈 개선 확인 후 진입하세요.`;
+  } else {
     verdict = 'wait'; verdictClass = 'wait';
     verdictTitle = '⏸ 관망 권고';
-    verdictReason = `TSS ${tssRounded}점 (${grade}등급). 뚜렷한 매수 신호가 부족합니다. 추세 전환 확인 후 재검토하세요.`;
-  } else {
-    verdict = 'avoid'; verdictClass = 'avoid';
-    verdictTitle = '⚠️ 매도 / 회피 권고';
-    verdictReason = `TSS ${tssRounded}점 (${grade}등급). 하락 위험이 높습니다. 보유 중이라면 비중 축소를 검토하세요.`;
+    verdictReason = `TSS ${tssRounded}점, ETS ${ets}점. 매수 시그널이 불충분합니다. 추세 전환 또는 눌림을 기다리세요.`;
   }
 
   // ── STEP 8: Final Report ──
-  const report = generateReport(data, { tss: tssRounded, grade, phase: phaseKR, scores, weights, filters, verdict, verdictTitle, indicators });
+  const report = generateReport(data, { tss: tssRounded, grade, phase: phaseKR, scores, weights, filters, verdict, verdictTitle, indicators, entryTiming });
 
   return {
     data, tss: tssRounded, grade, gradeDesc, gradeClass,
@@ -785,6 +978,7 @@ function analyze(data) {
     scores, weights, indicators,
     filters, failedFilters,
     verdict, verdictClass, verdictTitle, verdictReason,
+    entryTiming,
     report
   };
 }
@@ -826,6 +1020,14 @@ function generateReport(data, a) {
   lines.push(`  수급(Supply): ${a.scores.supply}점 (가중치 ${a.weights.supply}%)`);
   lines.push(`  기술적(Technical): ${a.scores.technical}점 (가중치 ${a.weights.technical}%)`);
   lines.push('');
+  lines.push(`[진입 타이밍 분석] ETS ${a.entryTiming ? a.entryTiming.score : '-'}점 (${a.entryTiming ? a.entryTiming.grade : '-'})`);
+  if (a.entryTiming && a.entryTiming.signals) {
+    for (const s of a.entryTiming.signals) {
+      const icon = s.type === 'positive' ? '🟢' : s.type === 'negative' ? '🔴' : '🟡';
+      lines.push(`  ${icon} ${s.text}`);
+    }
+  }
+  lines.push('');
   lines.push(`[필터 체크]`);
   for (const f of a.filters) {
     lines.push(`  ${f.pass ? '✅' : '❌'} ${f.name}: ${f.detail}`);
@@ -843,7 +1045,7 @@ function generateReport(data, a) {
 // ══════════════════════════════════════
 function renderResults(result) {
   const { data, tss, grade, gradeDesc, gradeClass, phaseKR, phaseClass,
-          scores, weights, filters, verdictClass, verdictTitle, verdictReason, report } = result;
+          scores, weights, filters, verdictClass, verdictTitle, verdictReason, entryTiming, report } = result;
 
   const formatPrice = (p) => {
     if (!p) return '-';
@@ -887,6 +1089,30 @@ function renderResults(result) {
     <div class="verdict-title">${verdictTitle}</div>
     <div class="verdict-reason">${verdictReason}</div>
   </div>`;
+
+  // Entry Timing Analysis Card (ETS)
+  if (entryTiming) {
+    const etsBarColor = entryTiming.score >= 65 ? 'var(--accent)' : entryTiming.score >= 45 ? 'var(--yellow)' : 'var(--red)';
+    html += '<div class="analysis-card ets-card">';
+    html += '<div class="analysis-card-title"><span class="card-icon">⏱</span> 진입 타이밍 분석 (ETS)</div>';
+    html += '<div class="ets-score-section">';
+    html += '<div class="ets-score-row">';
+    html += '<div class="ets-gauge-wrap"><div class="ets-gauge-track"><div class="ets-gauge-fill" style="width:' + entryTiming.score + '%;background:' + etsBarColor + '"></div></div></div>';
+    html += '<span class="ets-score-num">' + entryTiming.score + '</span>';
+    html += '</div>';
+    html += '<div class="ets-verdict ' + entryTiming.gradeClass + '">' + entryTiming.grade + '</div>';
+    html += '<div class="ets-desc">' + entryTiming.desc + '</div>';
+    html += '</div>';
+    if (entryTiming.signals && entryTiming.signals.length > 0) {
+      html += '<div class="ets-signals">';
+      for (const sig of entryTiming.signals) {
+        const dotClass = sig.type === 'positive' ? 'sig-positive' : sig.type === 'negative' ? 'sig-negative' : 'sig-neutral';
+        html += '<div class="ets-signal-item ' + dotClass + '"><span class="sig-dot"></span>' + sig.text + '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
 
   // Market Phase Card
   html += `<div class="analysis-card">
@@ -1443,6 +1669,7 @@ async function runTop20Scan() {
             phaseKR: result.phaseKR,
             verdict: result.verdict,
             verdictTitle: result.verdictTitle,
+            entryTiming: result.entryTiming,
             per: data.per,
             pbr: data.pbr,
             scores: result.scores
@@ -1459,8 +1686,12 @@ async function runTop20Scan() {
     if (i + batchSize < scanList.length) await new Promise(r => setTimeout(r, 100));
   }
 
-  // TSS 내림차순 정렬
-  allResults.sort((a, b) => b.tss - a.tss);
+  // TSS × ETS 교차 점수 정렬 (종목평가 50% + 진입타이밍 50%)
+  allResults.sort((a, b) => {
+    const scoreA = a.tss * 0.5 + (a.entryTiming ? a.entryTiming.score : 50) * 0.5;
+    const scoreB = b.tss * 0.5 + (b.entryTiming ? b.entryTiming.score : 50) * 0.5;
+    return scoreB - scoreA;
+  });
   _top20Data = allResults;
 
   renderTop20Results(allResults.slice(0, 20), allResults.length);
@@ -1488,6 +1719,7 @@ function renderTop20Results(top20, totalScanned) {
   html += '<th class="price-col">현재가</th>';
   html += '<th class="change-col">등락</th>';
   html += '<th class="tss-col">TSS</th>';
+  html += '<th class="ets-col">타이밍</th>';
   html += '<th class="grade-col">등급</th>';
   html += '<th class="phase-col">국면</th>';
   html += '<th class="detail-col">세부</th>';
@@ -1501,7 +1733,10 @@ function renderTop20Results(top20, totalScanned) {
     html += `<td class="name-col"><div class="stock-name-cell">${item.name}<span class="stock-code-sub">${item.code}</span></div></td>`;
     html += `<td class="price-col">${formatPrice(item.price)}</td>`;
     html += `<td class="change-col ${changeClass}">${formatChange(item.change, item.changePercent)}</td>`;
+    const etsVal = item.entryTiming ? item.entryTiming.score : '-';
+    const etsGradeClass = item.entryTiming ? item.entryTiming.gradeClass : '';
     html += `<td class="tss-col"><span class="tss-score">${item.tss}</span></td>`;
+    html += `<td class="ets-col"><span class="ets-badge ${etsGradeClass}">${etsVal}</span></td>`;
     html += `<td class="grade-col"><span class="grade-badge ${gradeClass}">${item.grade}</span></td>`;
     html += `<td class="phase-col">${item.phaseKR}</td>`;
     html += `<td class="detail-col">`;
@@ -1646,8 +1881,10 @@ const PICK_CANDIDATES = [
               gradeClass: result.gradeClass,
               phaseKR: result.phaseKR,
               verdictTitle: result.verdictTitle,
+              verdict: result.verdict,
               scores: result.scores,
               indicators: result.indicators,
+              entryTiming: result.entryTiming,
               per: data.per,
               pbr: data.pbr,
               volume: data.volume,
@@ -1665,20 +1902,30 @@ const PICK_CANDIDATES = [
       return;
     }
 
-    // TSS 1위 선정
-    allResults.sort((a, b) => b.tss - a.tss);
+    // TSS × ETS 교차 점수로 정렬 — 좋은 종목 + 좋은 타이밍
+    allResults.sort((a, b) => {
+      const scoreA = a.tss * 0.4 + (a.entryTiming ? a.entryTiming.score : 50) * 0.6;
+      const scoreB = b.tss * 0.4 + (b.entryTiming ? b.entryTiming.score : 50) * 0.6;
+      return scoreB - scoreA;
+    });
     const pick = allResults[0];
+    const pickETS = pick.entryTiming ? pick.entryTiming.score : 0;
 
-    // 왜 좋은지 요약 생성
+    // 왜 좋은지 + 왜 지금인지 요약 생성
     const reasons = [];
-    if (pick.scores.technical >= 70) reasons.push('이동평균선 정배열 — 기술적 위치 양호');
-    else if (pick.scores.technical >= 60) reasons.push('주요 이평선 위에 위치 — 추세 유지 중');
-    if (pick.scores.momentum >= 65) reasons.push('RSI·MACD 모멘텀 강세 신호 감지');
-    if (pick.scores.supply >= 65) reasons.push('거래량 증가와 상승 동반 — 수급 유입 확인');
+    // 타이밍 근거 우선
+    if (pick.entryTiming && pick.entryTiming.signals) {
+      const posSigs = pick.entryTiming.signals.filter(s => s.type === 'positive');
+      for (const s of posSigs.slice(0, 2)) {
+        reasons.push(s.text);
+      }
+    }
+    // 종목 퀄리티 근거
     if (pick.scores.value >= 65) reasons.push('PER·PBR 기준 저평가 구간');
-    if (pick.scores.growth >= 65) reasons.push('최근 60일 수익률 양호 — 성장세 지속');
-    if (pick.changePercent > 0) reasons.push(`전일대비 +${pick.changePercent.toFixed(2)}% 상승 마감`);
-    if (reasons.length === 0) reasons.push('5대 지표 종합 점수 최상위');
+    if (pick.scores.technical >= 70) reasons.push('이동평균선 정배열 — 기술적 위치 양호');
+    else if (pick.scores.technical >= 60) reasons.push('주요 이평선 위 — 추세 유지');
+    if (pick.scores.momentum >= 65) reasons.push('모멘텀 강세 신호 감지');
+    if (reasons.length === 0) reasons.push('TSS·ETS 교차 분석 최상위');
 
     // 신뢰 지표
     const trustBadges = [];
@@ -1698,7 +1945,7 @@ const PICK_CANDIDATES = [
 
     card.classList.remove('loading-shimmer');
     inner.innerHTML = `
-      <div class="pick-label">🔥 오늘의 추천 1위</div>
+      <div class="pick-label">🔥 오늘의 매수 적기 1위</div>
       <div class="pick-main">
         <div class="pick-name-row">
           <span class="pick-name">${pick.name}</span>
@@ -1713,6 +1960,12 @@ const PICK_CANDIDATES = [
           <span class="pick-tss-score">${pick.tss}</span>
           <span class="pick-tss-max">/ 100</span>
           <span class="pick-phase">${pick.phaseKR}</span>
+        </div>
+        <div class="pick-ets-row">
+          <span class="pick-ets-label">진입 타이밍</span>
+          <span class="pick-ets-score">${pickETS}</span>
+          <span class="pick-ets-max">/ 100</span>
+          <span class="pick-ets-grade ${pick.entryTiming ? pick.entryTiming.gradeClass : ''}">${pick.entryTiming ? pick.entryTiming.grade : '-'}</span>
         </div>
       </div>
       <div class="pick-reasons">

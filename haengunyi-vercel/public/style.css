@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════
    행운의서동이 — Dark Financial Terminal Theme
-   v3 — Card-based UX Redesign
+   v4 — 완벽한 트레이더 시스템 (TSS + ETS)
    ═══════════════════════════════════════════ */
 
 :root {
@@ -860,6 +860,141 @@ body {
 }
 
 /* ═══════════════════════════════════════════
+   ETS (진입 타이밍 점수) UI
+   ═══════════════════════════════════════════ */
+.ets-card {
+  border-color: rgba(59,130,246,0.25);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(59,130,246,0.04) 100%);
+}
+.ets-score-section {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.ets-score-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.ets-gauge-wrap { flex: 1; }
+.ets-gauge-track {
+  height: 10px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.ets-gauge-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.8s ease;
+}
+.ets-score-num {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--text-primary);
+  min-width: 40px;
+  text-align: right;
+  line-height: 1;
+}
+.ets-verdict {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+.ets-verdict.ets-buy { color: #00E08E; }
+.ets-verdict.ets-good { color: #22c55e; }
+.ets-verdict.ets-neutral { color: #eab308; }
+.ets-verdict.ets-bad { color: #f97316; }
+.ets-verdict.ets-danger { color: #ef4444; }
+.ets-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.ets-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ets-signal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+.sig-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.sig-positive .sig-dot { background: #00E08E; }
+.sig-negative .sig-dot { background: #ef4444; }
+.sig-neutral .sig-dot { background: #eab308; }
+.sig-positive { color: #a7f3d0; }
+.sig-negative { color: #fca5a5; }
+
+/* ── Pick 카드 ETS 행 ── */
+.pick-ets-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.pick-ets-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.pick-ets-score {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--blue);
+  line-height: 1;
+}
+.pick-ets-max {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.pick-ets-grade {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+.pick-ets-grade.ets-buy { background: rgba(0,224,142,0.15); color: #00E08E; }
+.pick-ets-grade.ets-good { background: rgba(34,197,94,0.15); color: #22c55e; }
+.pick-ets-grade.ets-neutral { background: rgba(234,179,8,0.15); color: #eab308; }
+.pick-ets-grade.ets-bad { background: rgba(249,115,22,0.15); color: #f97316; }
+.pick-ets-grade.ets-danger { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+/* ── TOP 20 테이블 ETS 칼럼 ── */
+.ets-col { text-align: center; min-width: 60px; }
+.ets-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.ets-badge.ets-buy { background: #00E08E22; color: #00E08E; }
+.ets-badge.ets-good { background: #22c55e22; color: #22c55e; }
+.ets-badge.ets-neutral { background: #eab30822; color: #eab308; }
+.ets-badge.ets-bad { background: #f9731622; color: #f97316; }
+.ets-badge.ets-danger { background: #ef444422; color: #ef4444; }
+
+/* ═══════════════════════════════════════════
    RESPONSIVE — 모바일 최적화
    ═══════════════════════════════════════════ */
 @media (max-width: 480px) {
@@ -873,8 +1008,12 @@ body {
   .pick-name { font-size: 18px; }
   .pick-price { font-size: 20px; }
   .pick-tss-score { font-size: 20px; }
+  .pick-ets-score { font-size: 18px; }
   .pick-reason { font-size: 12px; }
   .trust-badge { font-size: 10px; padding: 3px 8px; }
+  .ets-score-num { font-size: 24px; }
+  .ets-verdict { font-size: 16px; }
+  .ets-signal-item { font-size: 12px; padding: 5px 8px; }
 
   .main-cta-btn { font-size: 15px; padding: 14px 20px; }
 
@@ -887,7 +1026,7 @@ body {
   .top20-results-container { padding: 70px 8px 30px; }
   .top20-table { font-size: 13px; }
   .top20-table td, .top20-table th { padding: 10px 5px; }
-  .phase-col, .detail-col { display: none; }
+  .phase-col, .detail-col, .ets-col { display: none; }
   .top20-title { font-size: 22px; }
 }
 
