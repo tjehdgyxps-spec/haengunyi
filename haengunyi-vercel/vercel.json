@@ -1,27 +1,18 @@
 {
   "headers": [
     {
-      "source": "/app.js",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/style.css",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/index.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
       ]
     }
   ],
   "rewrites": [
     { "source": "/api/bundle", "destination": "/api/bundle" },
     { "source": "/api/search", "destination": "/api/search" },
+    { "source": "/api/price", "destination": "/api/price" },
     { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
