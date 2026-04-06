@@ -341,9 +341,16 @@ function parseStockData(bundle) {
     if (basic) {
       data.name = basic.stockName || basic.stockNameEng || data.symbol;
       data.price = parseFloat(String(basic.closePrice || basic.nowVal || 0).replace(/,/g, ''));
-      data.prevClose = parseFloat(String(basic.previousClosePrice || basic.prevClose || 0).replace(/,/g, ''));
-      data.change = data.price - data.prevClose;
-      data.changePercent = data.prevClose ? ((data.change / data.prevClose) * 100) : 0;
+      // Naver API: compareToPreviousClosePrice = 전일대비, fluctuationsRatio = 등락률%
+      if (basic.compareToPreviousClosePrice != null) {
+        data.change = parseFloat(String(basic.compareToPreviousClosePrice).replace(/,/g, ''));
+        data.changePercent = parseFloat(basic.fluctuationsRatio) || 0;
+        data.prevClose = data.price - data.change;
+      } else {
+        data.prevClose = parseFloat(String(basic.previousClosePrice || basic.prevClose || 0).replace(/,/g, ''));
+        data.change = data.price - data.prevClose;
+        data.changePercent = data.prevClose ? ((data.change / data.prevClose) * 100) : 0;
+      }
       data.volume = parseFloat(String(basic.accumulatedTradingVolume || basic.tradeVol || 0).replace(/,/g, ''));
       data.currency = 'KRW';
     }
