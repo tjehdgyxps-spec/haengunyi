@@ -384,3 +384,246 @@ body {
   vertical-align: middle;
 }
 @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+
+/* ══════════════════════════════════════
+   TSS TOP 20 — Launch Button
+   ══════════════════════════════════════ */
+.top20-launch-btn {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  margin: 20px auto;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #00E08E 0%, #00C07A 100%);
+  color: #000;
+  font-size: 17px;
+  font-weight: 800;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  letter-spacing: -0.3px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(0, 224, 142, 0.3);
+}
+.top20-launch-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(0, 224, 142, 0.45);
+}
+.top20-launch-btn:active { transform: translateY(0); }
+
+/* ══════════════════════════════════════
+   Scanning Screen
+   ══════════════════════════════════════ */
+.scan-container {
+  max-width: 600px;
+  margin: 80px auto 0;
+  padding: 0 20px;
+  text-align: center;
+}
+.scan-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+.scan-subtitle {
+  color: #8892a4;
+  font-size: 15px;
+  margin: 8px 0 30px;
+}
+.scan-progress-wrapper { margin: 0 auto 30px; }
+.scan-progress-track {
+  height: 8px;
+  background: #1a2035;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.scan-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00E08E, #00c9ff);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.scan-progress-text {
+  font-size: 14px;
+  color: #8892a4;
+  margin-top: 10px;
+}
+.scan-live-feed {
+  text-align: left;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.scan-feed-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  font-size: 14px;
+  color: #c8d0e0;
+  animation: feedIn 0.3s ease;
+}
+@keyframes feedIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.scan-feed-score {
+  font-weight: 700;
+  font-size: 13px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.scan-feed-score.a { background: #00E08E22; color: #00E08E; }
+.scan-feed-score.b { background: #7dd87d22; color: #7dd87d; }
+.scan-feed-score.c { background: #f0ad4e22; color: #f0ad4e; }
+.scan-feed-score.d { background: #e8783622; color: #e87836; }
+.scan-feed-score.f { background: #ff4d4d22; color: #ff4d4d; }
+
+/* ══════════════════════════════════════
+   TOP 20 Results Screen
+   ══════════════════════════════════════ */
+.top20-results-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 80px 16px 40px;
+}
+.top20-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.top20-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 8px;
+}
+.top20-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.top20-time {
+  font-size: 13px;
+  color: #8892a4;
+}
+.top20-countdown {
+  font-size: 12px;
+  color: #00E08E;
+  font-weight: 600;
+}
+.top20-refresh-btn {
+  padding: 8px 20px;
+  background: rgba(0, 224, 142, 0.12);
+  color: #00E08E;
+  border: 1px solid rgba(0, 224, 142, 0.25);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.top20-refresh-btn:hover { background: rgba(0, 224, 142, 0.2); }
+
+/* ── Table ── */
+.top20-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.top20-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.top20-table thead th {
+  padding: 10px 8px;
+  text-align: left;
+  color: #8892a4;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #1a2035;
+  white-space: nowrap;
+}
+.top20-table tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.top20-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+
+.top20-table td {
+  padding: 12px 8px;
+  color: #c8d0e0;
+  white-space: nowrap;
+}
+
+.rank-col { width: 40px; text-align: center; }
+.rank-badge {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+}
+.rank-top3 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
+.rank-normal { background: #1a2035; color: #8892a4; }
+
+.name-col { min-width: 100px; }
+.stock-name-cell { display: flex; flex-direction: column; gap: 2px; }
+.stock-name-cell .stock-code-sub { font-size: 11px; color: #5a6478; }
+
+.price-col { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.change-col { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.change-col.up { color: #ff4d4d; }
+.change-col.down { color: #4d8cff; }
+
+.tss-col { text-align: center; }
+.tss-score { font-weight: 800; font-size: 16px; color: #fff; }
+
+.grade-col { text-align: center; }
+.grade-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.grade-badge.grade-a { background: #00E08E22; color: #00E08E; }
+.grade-badge.grade-b { background: #7dd87d22; color: #7dd87d; }
+.grade-badge.grade-c { background: #f0ad4e22; color: #f0ad4e; }
+.grade-badge.grade-d { background: #e8783622; color: #e87836; }
+.grade-badge.grade-f { background: #ff4d4d22; color: #ff4d4d; }
+
+.phase-col { font-size: 13px; color: #8892a4; }
+
+.detail-col { min-width: 180px; }
+.detail-tag {
+  display: inline-block;
+  padding: 2px 5px;
+  margin: 1px 2px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.05);
+  color: #8892a4;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .top20-results-container { padding: 70px 8px 30px; }
+  .top20-table { font-size: 13px; }
+  .top20-table td, .top20-table th { padding: 10px 5px; }
+  .phase-col, .detail-col { display: none; }
+  .top20-title { font-size: 22px; }
+}

@@ -1305,3 +1305,264 @@ showScreen = function(screen) {
   }
   _origShowScreen(screen);
 };
+
+// ══════════════════════════════════════
+// 11. TSS TOP 20 실시간 추천
+// ══════════════════════════════════════
+
+const top20ScanScreen = document.getElementById('top20-scan-screen');
+const top20ResultsScreen = document.getElementById('top20-results-screen');
+const scanProgressBar = document.getElementById('scan-progress-bar');
+const scanProgressText = document.getElementById('scan-progress-text');
+const scanLiveFeed = document.getElementById('scan-live-feed');
+const top20TableWrap = document.getElementById('top20-table-wrap');
+const top20UpdateTime = document.getElementById('top20-update-time');
+const top20Countdown = document.getElementById('top20-countdown');
+
+let _top20Timer = null;
+let _countdownTimer = null;
+let _top20Data = null;
+
+// 중복 제거된 스캔 리스트 생성
+function getUniqueScanList() {
+  const seen = new Set();
+  const list = [];
+  for (const [name, info] of Object.entries(KOREAN_STOCKS)) {
+    if (!seen.has(info.code)) {
+      seen.add(info.code);
+      list.push({ name, code: info.code, market: info.market });
+    }
+  }
+  return list;
+}
+
+// quickscan API 호출
+async function fetchQuickScan(code) {
+  const res = await fetch(`${API_BASE}/api/quickscan?code=${code}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.error) return null;
+  return data;
+}
+
+// quickscan 데이터를 analyze() 호환 형식으로 변환
+function parseScanData(scan, stock) {
+  const chart = scan.chart || [];
+  const prices = chart.map(c => c.close).filter(v => v > 0 && !isNaN(v));
+  const volumes = chart.map(c => c.volume || 0);
+  const highs = chart.map(c => c.high).filter(v => v > 0 && !isNaN(v));
+  const lows = chart.map(c => c.low).filter(v => v > 0 && !isNaN(v));
+
+  const recentVols = volumes.slice(-20);
+  const avgVolume = recentVols.length > 0 ? recentVols.reduce((a, b) => a + b, 0) / recentVols.length : 0;
+
+  return {
+    name: scan.name,
+    symbol: stock.code + '.' + stock.market,
+    isKorean: true,
+    price: scan.price || 0,
+    prevClose: (scan.price || 0) - (scan.change || 0),
+    change: scan.change || 0,
+    changePercent: scan.changePercent || 0,
+    volume: scan.volume || 0,
+    avgVolume: avgVolume,
+    high52w: scan.high52w || 0,
+    low52w: scan.low52w || 0,
+    marketCap: 0,
+    per: scan.per || 0,
+    pbr: scan.pbr || 0,
+    eps: scan.eps || 0,
+    targetPrice: scan.targetPrice || 0,
+    prices: prices,
+    volumes: volumes,
+    highs: highs,
+    lows: lows,
+    currency: 'KRW'
+  };
+}
+
+// 스캔 진행상황 업데이트
+function updateScanProgress(done, total) {
+  const pct = total > 0 ? (done / total * 100) : 0;
+  scanProgressBar.style.width = pct + '%';
+  scanProgressText.textContent = `${done} / ${total} 종목 분석 완료`;
+}
+
+// 라이브 피드에 종목 추가
+function addScanFeedItem(name, tss, grade) {
+  const item = document.createElement('div');
+  item.className = 'scan-feed-item';
+  item.innerHTML = `<span>${name}</span><span class="scan-feed-score ${grade.toLowerCase()}">${tss}점 ${grade}등급</span>`;
+  scanLiveFeed.prepend(item);
+  if (scanLiveFeed.children.length > 8) scanLiveFeed.lastChild.remove();
+}
+
+// 메인 스캔 실행
+async function runTop20Scan() {
+  showScreen(top20ScanScreen);
+  scanLiveFeed.innerHTML = '';
+  scanProgressBar.style.width = '0%';
+
+  const scanList = getUniqueScanList();
+  const batchSize = 6;
+  const allResults = [];
+  let done = 0;
+
+  updateScanProgress(0, scanList.length);
+
+  for (let i = 0; i < scanList.length; i += batchSize) {
+    const batch = scanList.slice(i, i + batchSize);
+    const promises = batch.map(s => fetchQuickScan(s.code).catch(() => null));
+    const batchResults = await Promise.all(promises);
+
+    for (let j = 0; j < batchResults.length; j++) {
+      done++;
+      const scanData = batchResults[j];
+      if (!scanData) continue;
+
+      const stock = batch[j];
+      try {
+        const data = parseScanData(scanData, stock);
+        if (data.price > 0 && data.prices.length >= 20) {
+          const result = analyze(data);
+          const entry = {
+            name: scanData.name || stock.name,
+            code: stock.code,
+            market: stock.market,
+            symbol: stock.code + '.' + stock.market,
+            price: data.price,
+            change: data.change,
+            changePercent: data.changePercent,
+            tss: result.tss,
+            grade: result.grade,
+            gradeClass: result.gradeClass,
+            phaseKR: result.phaseKR,
+            verdict: result.verdict,
+            verdictTitle: result.verdictTitle,
+            per: data.per,
+            pbr: data.pbr,
+            scores: result.scores
+          };
+          allResults.push(entry);
+          addScanFeedItem(entry.name, entry.tss, entry.grade);
+        }
+      } catch (e) {
+        console.log('Scan skip:', stock.name, e.message);
+      }
+    }
+    updateScanProgress(done, scanList.length);
+    // 배치 간 100ms 딜레이 (네이버 부하 방지)
+    if (i + batchSize < scanList.length) await new Promise(r => setTimeout(r, 100));
+  }
+
+  // TSS 내림차순 정렬
+  allResults.sort((a, b) => b.tss - a.tss);
+  _top20Data = allResults;
+
+  renderTop20Results(allResults.slice(0, 20), allResults.length);
+  showScreen(top20ResultsScreen);
+  startAutoRefreshTimer();
+}
+
+// TOP 20 결과 렌더링
+function renderTop20Results(top20, totalScanned) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+  top20UpdateTime.textContent = `${dateStr} ${timeStr} 기준 · ${totalScanned}개 종목 분석`;
+
+  const formatPrice = (p) => '₩' + Math.round(p).toLocaleString();
+  const formatChange = (c, pct) => {
+    const sign = c >= 0 ? '+' : '';
+    const arrow = c >= 0 ? '▲' : '▼';
+    return `${arrow} ${sign}${pct.toFixed(2)}%`;
+  };
+
+  let html = '<table class="top20-table"><thead><tr>';
+  html += '<th class="rank-col">#</th>';
+  html += '<th class="name-col">종목</th>';
+  html += '<th class="price-col">현재가</th>';
+  html += '<th class="change-col">등락</th>';
+  html += '<th class="tss-col">TSS</th>';
+  html += '<th class="grade-col">등급</th>';
+  html += '<th class="phase-col">국면</th>';
+  html += '<th class="detail-col">세부</th>';
+  html += '</tr></thead><tbody>';
+
+  top20.forEach((item, idx) => {
+    const changeClass = item.change >= 0 ? 'up' : 'down';
+    const gradeClass = 'grade-' + item.grade.toLowerCase();
+    html += `<tr class="top20-row" data-symbol="${item.symbol}" data-name="${item.name}">`;
+    html += `<td class="rank-col"><span class="rank-badge rank-${idx < 3 ? 'top3' : 'normal'}">${idx + 1}</span></td>`;
+    html += `<td class="name-col"><div class="stock-name-cell">${item.name}<span class="stock-code-sub">${item.code}</span></div></td>`;
+    html += `<td class="price-col">${formatPrice(item.price)}</td>`;
+    html += `<td class="change-col ${changeClass}">${formatChange(item.change, item.changePercent)}</td>`;
+    html += `<td class="tss-col"><span class="tss-score">${item.tss}</span></td>`;
+    html += `<td class="grade-col"><span class="grade-badge ${gradeClass}">${item.grade}</span></td>`;
+    html += `<td class="phase-col">${item.phaseKR}</td>`;
+    html += `<td class="detail-col">`;
+    html += `<span class="detail-tag">V ${Math.round(item.scores.value)}</span>`;
+    html += `<span class="detail-tag">G ${Math.round(item.scores.growth)}</span>`;
+    html += `<span class="detail-tag">M ${Math.round(item.scores.momentum)}</span>`;
+    html += `<span class="detail-tag">S ${Math.round(item.scores.supply)}</span>`;
+    html += `<span class="detail-tag">T ${Math.round(item.scores.technical)}</span>`;
+    html += `</td>`;
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  top20TableWrap.innerHTML = html;
+
+  // 행 클릭 → 상세 분석
+  top20TableWrap.querySelectorAll('.top20-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const sym = row.dataset.symbol;
+      const name = row.dataset.name;
+      stockInput.value = name;
+      runAnalysisDirect(sym, name);
+    });
+  });
+}
+
+// 자동 갱신 타이머
+function startAutoRefreshTimer() {
+  if (_top20Timer) clearTimeout(_top20Timer);
+  if (_countdownTimer) clearInterval(_countdownTimer);
+
+  // 장중(9:00~15:30) = 10분, 그 외 = 30분
+  const now = new Date();
+  const kstHour = (now.getUTCHours() + 9) % 24;
+  const isMarketHours = kstHour >= 9 && kstHour < 16;
+  const refreshMs = isMarketHours ? 10 * 60 * 1000 : 30 * 60 * 1000;
+  const refreshMin = refreshMs / 60000;
+
+  let remaining = refreshMs;
+  _countdownTimer = setInterval(() => {
+    remaining -= 1000;
+    if (remaining <= 0) {
+      clearInterval(_countdownTimer);
+      return;
+    }
+    const min = Math.floor(remaining / 60000);
+    const sec = Math.floor((remaining % 60000) / 1000);
+    top20Countdown.textContent = `다음 갱신: ${min}분 ${sec}초 후${isMarketHours ? ' (장중 10분 주기)' : ' (장외 30분 주기)'}`;
+  }, 1000);
+
+  _top20Timer = setTimeout(() => {
+    runTop20Scan();
+  }, refreshMs);
+}
+
+// 이벤트 바인딩
+document.getElementById('top20-btn').addEventListener('click', () => runTop20Scan());
+document.getElementById('top20-back-btn').addEventListener('click', () => {
+  if (_top20Timer) clearTimeout(_top20Timer);
+  if (_countdownTimer) clearInterval(_countdownTimer);
+  showScreen(searchScreen);
+});
+document.getElementById('top20-results-back-btn').addEventListener('click', () => {
+  if (_top20Timer) clearTimeout(_top20Timer);
+  if (_countdownTimer) clearInterval(_countdownTimer);
+  showScreen(searchScreen);
+});
+document.getElementById('top20-refresh-btn').addEventListener('click', () => runTop20Scan());

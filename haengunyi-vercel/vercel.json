@@ -13,6 +13,7 @@
     { "source": "/api/bundle", "destination": "/api/bundle" },
     { "source": "/api/search", "destination": "/api/search" },
     { "source": "/api/price", "destination": "/api/price" },
+    { "source": "/api/quickscan", "destination": "/api/quickscan" },
     { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }

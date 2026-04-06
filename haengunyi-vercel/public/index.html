@@ -19,6 +19,10 @@
     </div>
     <h1 class="hero-title">행운의서동이</h1>
     <p class="hero-subtitle">AI 종목 분석 엔진</p>
+
+    <!-- TOP 20 추천 버튼 -->
+    <button id="top20-btn" class="top20-launch-btn">🏆 TSS TOP 20 실시간 추천</button>
+
     <div class="search-box-wrapper">
       <div class="search-box">
         <span class="search-icon">🔍</span>
@@ -77,6 +81,49 @@
   <div class="ad-banner">
     <script src="https://ads-partners.coupang.com/g.js"></script>
     <script>new PartnersCoupang.G({"id":978468,"template":"carousel","trackingCode":"AF9783779","width":"680","height":"140","tsource":""});</script>
+  </div>
+</div>
+
+<!-- ─── TOP 20 SCANNING SCREEN ─── -->
+<div id="top20-scan-screen" class="screen hidden">
+  <nav class="top-bar">
+    <button id="top20-back-btn" class="back-btn">← 돌아가기</button>
+    <span class="logo-text"><span class="logo-icon">📈</span> 행운의서동이</span>
+  </nav>
+  <div class="scan-container">
+    <div class="scan-header">
+      <h2 class="scan-title">🏆 TSS TOP 20</h2>
+      <p class="scan-subtitle">국내 종목 실시간 분석 중...</p>
+    </div>
+    <div class="scan-progress-wrapper">
+      <div class="scan-progress-track"><div id="scan-progress-bar" class="scan-progress-fill"></div></div>
+      <div id="scan-progress-text" class="scan-progress-text">0 / 0 종목 분석 완료</div>
+    </div>
+    <div id="scan-live-feed" class="scan-live-feed"></div>
+  </div>
+</div>
+
+<!-- ─── TOP 20 RESULTS SCREEN ─── -->
+<div id="top20-results-screen" class="screen hidden">
+  <nav class="top-bar">
+    <button id="top20-results-back-btn" class="back-btn">← 메인</button>
+    <span class="logo-text"><span class="logo-icon">📈</span> 행운의서동이</span>
+  </nav>
+  <div class="top20-results-container">
+    <div class="top20-header">
+      <h2 class="top20-title">🏆 TSS TOP 20 추천</h2>
+      <div class="top20-meta">
+        <span id="top20-update-time" class="top20-time"></span>
+        <span id="top20-countdown" class="top20-countdown"></span>
+      </div>
+      <button id="top20-refresh-btn" class="top20-refresh-btn">🔄 새로고침</button>
+    </div>
+    <div id="top20-table-wrap" class="top20-table-wrap"></div>
+    <p class="disclaimer">본 분석은 투자 참고용이며, 투자 판단의 책임은 본인에게 있습니다.</p>
+    <div class="ad-banner">
+      <script src="https://ads-partners.coupang.com/g.js"></script>
+      <script>new PartnersCoupang.G({"id":978468,"template":"carousel","trackingCode":"AF9783779","width":"680","height":"140","tsource":""});</script>
+    </div>
   </div>
 </div>
 
