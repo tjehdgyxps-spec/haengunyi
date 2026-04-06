@@ -859,19 +859,18 @@ function renderResults(result) {
 
   let html = '';
 
-  // Stock Hero
-  const afterBadge = data.isAfterHours ? '<span class="after-hours-badge">시간외</span>' : '';
-  const tradedTime = data.tradedAt ? new Date(data.tradedAt).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
-  const timeInfo = tradedTime ? `<div class="price-time">${tradedTime} 기준 ${afterBadge}</div>` : (afterBadge ? `<div class="price-time">${afterBadge}</div>` : '');
+  // Stock Hero — 실시간 가격 갱신 대상
   html += `<div class="stock-hero">
     <div class="stock-hero-name">${data.name}</div>
     <div class="stock-hero-symbol">${data.symbol}</div>
-    <div class="stock-hero-price">${formatPrice(data.price)}</div>
-    <div class="stock-hero-change ${data.change >= 0 ? 'up' : 'down'}">
+    <div class="stock-hero-price" id="live-price">${formatPrice(data.price)}</div>
+    <div class="stock-hero-change ${data.change >= 0 ? 'up' : 'down'}" id="live-change">
       ${data.change >= 0 ? '▲' : '▼'} ${Math.abs(data.change).toLocaleString()} (${data.changePercent >= 0 ? '+' : ''}${data.changePercent.toFixed(2)}%)
     </div>
-    ${timeInfo}
+    <div class="price-time" id="live-time"><span class="live-dot"></span> 실시간</div>
   </div>`;
+  // 실시간 가격 갱신 시작
+  startLivePriceRefresh(data.symbol, data.currency);
 
   // TSS Score
   html += `<div class="tss-score-section">
@@ -1226,3 +1225,58 @@ stockInput.focus();
     }
   } catch(e) { /* silent fail */ }
 })();
+
+// ══════════════════════════════════════
+// LIVE PRICE REFRESH (15초마다 최신 가격)
+// ══════════════════════════════════════
+let _livePriceTimer = null;
+
+function startLivePriceRefresh(symbol, currency) {
+  // 기존 타이머 정리
+  if (_livePriceTimer) clearInterval(_livePriceTimer);
+
+  const fmt = (p) => {
+    const num = parseFloat(String(p).replace(/,/g, ''));
+    if (currency === 'KRW') return '₩' + num.toLocaleString();
+    return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  async function refresh() {
+    try {
+      const res = await fetch(`${API_BASE}/api/price?symbol=${encodeURIComponent(symbol)}`);
+      if (!res.ok) return;
+      const d = await res.json();
+
+      const priceEl = document.getElementById('live-price');
+      const changeEl = document.getElementById('live-change');
+      const timeEl = document.getElementById('live-time');
+      if (!priceEl) { clearInterval(_livePriceTimer); return; }
+
+      const price = parseFloat(String(d.price).replace(/,/g, ''));
+      const change = parseFloat(String(d.change).replace(/,/g, ''));
+      const pct = parseFloat(d.changePercent);
+
+      priceEl.textContent = fmt(price);
+      changeEl.className = 'stock-hero-change ' + (change >= 0 ? 'up' : 'down');
+      changeEl.textContent = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toLocaleString()} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)`;
+
+      const now = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const badge = d.isAfterHours ? ' 시간외' : '';
+      timeEl.innerHTML = `<span class="live-dot"></span> ${now} 기준${badge}`;
+    } catch (e) { /* silent */ }
+  }
+
+  // 즉시 1회 + 15초마다
+  refresh();
+  _livePriceTimer = setInterval(refresh, 15000);
+}
+
+// 결과 화면 벗어나면 타이머 정리
+const _origShowScreen = showScreen;
+showScreen = function(screen) {
+  if (screen !== resultsScreen && _livePriceTimer) {
+    clearInterval(_livePriceTimer);
+    _livePriceTimer = null;
+  }
+  _origShowScreen(screen);
+};
