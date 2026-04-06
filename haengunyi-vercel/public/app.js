@@ -340,16 +340,31 @@ function parseStockData(bundle) {
 
     if (basic) {
       data.name = basic.stockName || basic.stockNameEng || data.symbol;
-      data.price = parseFloat(String(basic.closePrice || basic.nowVal || 0).replace(/,/g, ''));
-      // Naver API: compareToPreviousClosePrice = 전일대비, fluctuationsRatio = 등락률%
-      if (basic.compareToPreviousClosePrice != null) {
-        data.change = parseFloat(String(basic.compareToPreviousClosePrice).replace(/,/g, ''));
-        data.changePercent = parseFloat(basic.fluctuationsRatio) || 0;
+      data.marketStatus = basic.marketStatus; // 'OPEN','CLOSE','PREOPEN' 등
+      data.tradedAt = basic.localTradedAt || '';
+
+      // 시간외 거래 활성 시: 시간외 가격을 메인으로 표시 (토스증권과 동일)
+      const over = basic.overMarketPriceInfo;
+      const isAfterHours = over && over.overMarketStatus === 'OPEN' && over.overPrice;
+
+      if (isAfterHours) {
+        data.price = parseFloat(String(over.overPrice).replace(/,/g, ''));
+        data.change = parseFloat(String(over.compareToPreviousClosePrice).replace(/,/g, ''));
+        data.changePercent = parseFloat(over.fluctuationsRatio) || 0;
         data.prevClose = data.price - data.change;
+        data.isAfterHours = true;
       } else {
-        data.prevClose = parseFloat(String(basic.previousClosePrice || basic.prevClose || 0).replace(/,/g, ''));
-        data.change = data.price - data.prevClose;
-        data.changePercent = data.prevClose ? ((data.change / data.prevClose) * 100) : 0;
+        data.price = parseFloat(String(basic.closePrice || basic.nowVal || 0).replace(/,/g, ''));
+        if (basic.compareToPreviousClosePrice != null) {
+          data.change = parseFloat(String(basic.compareToPreviousClosePrice).replace(/,/g, ''));
+          data.changePercent = parseFloat(basic.fluctuationsRatio) || 0;
+          data.prevClose = data.price - data.change;
+        } else {
+          data.prevClose = parseFloat(String(basic.previousClosePrice || basic.prevClose || 0).replace(/,/g, ''));
+          data.change = data.price - data.prevClose;
+          data.changePercent = data.prevClose ? ((data.change / data.prevClose) * 100) : 0;
+        }
+        data.isAfterHours = false;
       }
       data.volume = parseFloat(String(basic.accumulatedTradingVolume || basic.tradeVol || 0).replace(/,/g, ''));
       data.currency = 'KRW';
@@ -845,6 +860,9 @@ function renderResults(result) {
   let html = '';
 
   // Stock Hero
+  const afterBadge = data.isAfterHours ? '<span class="after-hours-badge">시간외</span>' : '';
+  const tradedTime = data.tradedAt ? new Date(data.tradedAt).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
+  const timeInfo = tradedTime ? `<div class="price-time">${tradedTime} 기준 ${afterBadge}</div>` : (afterBadge ? `<div class="price-time">${afterBadge}</div>` : '');
   html += `<div class="stock-hero">
     <div class="stock-hero-name">${data.name}</div>
     <div class="stock-hero-symbol">${data.symbol}</div>
@@ -852,6 +870,7 @@ function renderResults(result) {
     <div class="stock-hero-change ${data.change >= 0 ? 'up' : 'down'}">
       ${data.change >= 0 ? '▲' : '▼'} ${Math.abs(data.change).toLocaleString()} (${data.changePercent >= 0 ? '+' : ''}${data.changePercent.toFixed(2)}%)
     </div>
+    ${timeInfo}
   </div>`;
 
   // TSS Score
