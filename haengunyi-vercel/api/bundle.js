@@ -34,7 +34,7 @@ module.exports = async function handler(req, res) {
       result.yahoo = yahooChart;
       result.yahooDaily = yahooDailyChange;
       if (!yahooChart) {
-        return res.status(502).json({ error: 'Failed to fetch stock data. Please try again.' });
+        return res.status(502).json({ error: '데이터를 가져올 수 없습니다. 종목명을 확인하고 다시 시도해주세요.' });
       }
     }
     res.json(result);
