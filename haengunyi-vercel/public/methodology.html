@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSS 분석 방법론 — 행운의서동이</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0e17;
+  color: #c8d0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Noto Sans KR', sans-serif;
+  line-height: 1.7;
+  padding: 0 0 60px;
+}
+.header {
+  text-align: center;
+  padding: 50px 20px 30px;
+  border-bottom: 1px solid #1a2035;
+}
+.header-logo { font-size: 40px; margin-bottom: 12px; }
+.header h1 {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+.header p {
+  color: #8892a4;
+  font-size: 15px;
+  margin-top: 8px;
+}
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Section */
+.section {
+  margin-top: 48px;
+}
+.section-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.section h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 16px;
+  letter-spacing: -0.3px;
+}
+.section p {
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+.accent { color: #00E08E; }
+
+/* Intro card */
+.intro-card {
+  background: linear-gradient(135deg, rgba(0,224,142,0.08), rgba(0,201,255,0.05));
+  border: 1px solid rgba(0,224,142,0.15);
+  border-radius: 16px;
+  padding: 28px 24px;
+  margin-top: 36px;
+}
+.intro-card h2 {
+  font-size: 20px;
+  color: #00E08E;
+}
+.intro-card p {
+  color: #a0aab8;
+  font-size: 15px;
+}
+.intro-highlight {
+  font-size: 17px;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+/* Steps */
+.step-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 20px;
+}
+.step-item {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 28px;
+}
+.step-item:last-child { padding-bottom: 0; }
+.step-num-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+.step-num {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  border-radius: 50%;
+  background: #00E08E;
+  color: #000;
+  font-weight: 800;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.step-line {
+  flex: 1;
+  width: 2px;
+  background: #1a2035;
+  margin-top: 6px;
+}
+.step-content { flex: 1; }
+.step-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.step-desc {
+  font-size: 14px;
+  color: #8892a4;
+}
+
+/* Score cards */
+.score-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+@media (max-width: 500px) {
+  .score-grid { grid-template-columns: 1fr; }
+}
+.score-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 18px 16px;
+}
+.score-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.score-card-icon {
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  border-radius: 8px;
+  font-size: 16px;
+}
+.score-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+.score-card-body {
+  font-size: 13px;
+  color: #8892a4;
+  line-height: 1.6;
+}
+.score-card-body li {
+  margin-bottom: 3px;
+  list-style: none;
+}
+.score-card-body li::before {
+  content: '·';
+  color: #00E08E;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* Grade table */
+.grade-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+.grade-table th {
+  text-align: left;
+  padding: 10px 12px;
+  color: #8892a4;
+  font-weight: 600;
+  border-bottom: 1px solid #1a2035;
+  font-size: 12px;
+}
+.grade-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.grade-label {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 14px;
+}
+.grade-label.a { background: #00E08E22; color: #00E08E; }
+.grade-label.b { background: #7dd87d22; color: #7dd87d; }
+.grade-label.c { background: #f0ad4e22; color: #f0ad4e; }
+.grade-label.d { background: #e8783622; color: #e87836; }
+.grade-label.f { background: #ff4d4d22; color: #ff4d4d; }
+
+/* Filter */
+.filter-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.filter-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.filter-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.filter-name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 14px;
+}
+.filter-desc {
+  font-size: 13px;
+  color: #8892a4;
+}
+
+/* Weight table */
+.weight-demo {
+  margin-top: 20px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 20px;
+}
+.weight-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.weight-label {
+  width: 80px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #c8d0e0;
+  flex-shrink: 0;
+}
+.weight-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #1a2035;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.weight-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.weight-pct {
+  width: 36px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* CTA */
+.cta-section {
+  text-align: center;
+  margin-top: 56px;
+  padding: 32px 20px;
+  background: linear-gradient(135deg, rgba(0,224,142,0.08), rgba(0,201,255,0.05));
+  border-radius: 16px;
+  border: 1px solid rgba(0,224,142,0.15);
+}
+.cta-section h2 {
+  font-size: 22px;
+  color: #fff;
+}
+.cta-btn {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 14px 40px;
+  background: linear-gradient(135deg, #00E08E, #00C07A);
+  color: #000;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  border-radius: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(0,224,142,0.3);
+}
+.cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(0,224,142,0.45);
+}
+
+.footer {
+  text-align: center;
+  margin-top: 48px;
+  padding: 24px 20px;
+  font-size: 12px;
+  color: #5a6478;
+  border-top: 1px solid #1a2035;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">📈</div>
+  <h1>TSS 분석 방법론</h1>
+  <p>행운의서동이는 어떻게 종목을 분석하는가</p>
+</div>
+
+<div class="container">
+
+  <!-- INTRO -->
+  <div class="intro-card">
+    <h2>TSS란?</h2>
+    <p>TSS(Total Stock Score)는 행운의서동이가 개발한 종합 주식 평가 점수입니다.</p>
+    <p class="intro-highlight">
+      "이 종목 지금 사도 될까?" — 이 단순한 질문에<br>
+      감이 아닌 <span class="accent">숫자</span>로 답하기 위해 만들었습니다.
+    </p>
+    <p style="margin-top:14px;">하나의 종목을 5가지 관점에서 분석하고, 시장 국면에 따라 가중치를 자동 조절한 뒤, 100점 만점의 점수로 환산합니다. 여기에 5가지 안전 필터를 추가로 통과시켜, 숫자만 좋아 보이는 함정 종목을 걸러냅니다.</p>
+  </div>
+
+  <!-- 8-STEP FLOW -->
+  <div class="section">
+    <span class="section-badge" style="background:#00E08E22; color:#00E08E;">PROCESS</span>
+    <h2>8단계 분석 프로세스</h2>
+    <p>모든 종목은 아래 8단계를 순서대로 거칩니다. 단 한 단계도 건너뛰지 않습니다.</p>
+
+    <div class="step-flow">
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">시장 데이터 수집</div>
+          <div class="step-desc">현재가, 전일대비, 거래량, PER, PBR, EPS, 52주 고/저, 목표가, 1년치 일봉 차트를 실시간으로 수집합니다.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">시장 국면 진단</div>
+          <div class="step-desc">5일/20일/60일 이동평균선 배열과 현재가 위치를 비교해 <strong>상승 추세, 하락 추세, 반등 국면, 횡보 국면</strong> 4가지 중 하나로 진단합니다.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">국면별 가중치 조절</div>
+          <div class="step-desc">상승장에서는 모멘텀과 기술적 지표에 더 큰 비중을, 하락장에서는 가치와 안전성에 더 큰 비중을 둡니다. 시장 상황에 맞게 판단 기준이 자동으로 바뀝니다.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">5대 카테고리 채점</div>
+          <div class="step-desc">가치(Value), 성장(Growth), 모멘텀(Momentum), 수급(Supply), 기술(Technical) — 각 항목을 0~100점으로 독립 채점합니다.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">5</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">TSS 산출</div>
+          <div class="step-desc">5개 카테고리 점수에 국면별 가중치를 곱해 가중 평균을 계산합니다. 이것이 TSS(0~100)입니다.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">6</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">안전 필터 점검</div>
+          <div class="step-desc">TSS 점수가 높아도 위험한 종목이 있습니다. 5가지 안전 필터로 급락, 이상 거래량, 과대평가, 추세 이탈, 과도한 변동성을 검사합니다.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">7</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">최종 판정</div>
+          <div class="step-desc">TSS 점수와 필터 결과를 종합해 <strong>매수 추천 / 보유 / 관망 / 매도</strong> 중 하나의 판정을 내립니다.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">8</div></div>
+        <div class="step-content">
+          <div class="step-title">분석 리포트 생성</div>
+          <div class="step-desc">모든 분석 결과를 한눈에 볼 수 있는 리포트로 정리합니다. 왜 이 점수가 나왔는지 투명하게 공개합니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCORING CATEGORIES -->
+  <div class="section">
+    <span class="section-badge" style="background:#4d8cff22; color:#4d8cff;">SCORING</span>
+    <h2>5대 평가 카테고리</h2>
+    <p>각 카테고리는 기본 50점에서 시작하여, 해당 지표의 상태에 따라 가감됩니다.</p>
+
+    <div class="score-grid">
+      <div class="score-card">
+        <div class="score-card-header">
+          <div class="score-card-icon" style="background:#FFD70022;">💰</div>
+          <div class="score-card-title">가치 (Value)</div>
+        </div>
+        <div class="score-card-body">
+          <ul>
+            <li>PER: 낮을수록 가점 (8 미만 +20, 15 미만 +10)</li>
+            <li>PBR: 1 미만 +10, 5 초과 -10</li>
+            <li>52주 위치: 저점 근처 +10, 고점 근처 -10</li>
+            <li>목표가 괴리: 상승 여력 30% 이상 +15</li>
+          </ul>
+        </div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-header">
+          <div class="score-card-icon" style="background:#00E08E22;">📈</div>
+          <div class="score-card-title">성장 (Growth)</div>
+        </div>
+        <div class="score-card-body">
+          <ul>
+            <li>60일 수익률: 20% 이상 +20, 10% 이상 +15</li>
+            <li>EPS(주당순이익): 양수일 경우 +10</li>
+            <li>하락률: -10% 이하 -15</li>
+          </ul>
+        </div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-header">
+          <div class="score-card-icon" style="background:#ff4d4d22;">⚡</div>
+          <div class="score-card-title">모멘텀 (Momentum)</div>
+        </div>
+        <div class="score-card-body">
+          <ul>
+            <li>RSI: 60~75 강세 +15, 75 초과 과매수 -10</li>
+            <li>MACD 히스토그램: 양수 +10, 음수 -5</li>
+            <li>볼린저밴드 %B: 30~70 안정 +5</li>
+          </ul>
+        </div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-header">
+          <div class="score-card-icon" style="background:#4d8cff22;">🔄</div>
+          <div class="score-card-title">수급 (Supply)</div>
+        </div>
+        <div class="score-card-body">
+          <ul>
+            <li>거래량 비율: 평균 2배 + 상승 시 +20</li>
+            <li>거래량 급증 + 하락: -15 (투매 징후)</li>
+            <li>거래 부진 (평균 50% 미만): -5</li>
+          </ul>
+        </div>
+      </div>
+      <div class="score-card" style="grid-column: 1 / -1;">
+        <div class="score-card-header">
+          <div class="score-card-icon" style="background:#c084fc22;">📊</div>
+          <div class="score-card-title">기술적 분석 (Technical)</div>
+        </div>
+        <div class="score-card-body">
+          <ul>
+            <li>이동평균선 정배열: 5일선 > 20일선 > 60일선 > 120일선 위에 현재가 → 최대 +35</li>
+            <li>골든크로스 경향 (5일선 > 20일선) +5 / 데드크로스 경향 -5</li>
+            <li>변동성: 20% 미만 안정 +5, 50% 초과 고위험 -10</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE WEIGHTS -->
+  <div class="section">
+    <span class="section-badge" style="background:#c084fc22; color:#c084fc;">ADAPTIVE</span>
+    <h2>시장 국면별 가중치</h2>
+    <p>같은 종목이라도 시장 환경에 따라 중요한 지표가 다릅니다. 행운의서동이는 현재 국면을 자동 진단하고 가중치를 조절합니다.</p>
+
+    <h3 style="color:#fff; font-size:15px; margin-top:24px; margin-bottom:8px;">📗 평시 (횡보)</h3>
+    <div class="weight-demo">
+      <div class="weight-row"><span class="weight-label">가치</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:20%; background:#FFD700;"></div></div><span class="weight-pct">20%</span></div>
+      <div class="weight-row"><span class="weight-label">성장</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:20%; background:#00E08E;"></div></div><span class="weight-pct">20%</span></div>
+      <div class="weight-row"><span class="weight-label">모멘텀</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:20%; background:#ff4d4d;"></div></div><span class="weight-pct">20%</span></div>
+      <div class="weight-row"><span class="weight-label">수급</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:20%; background:#4d8cff;"></div></div><span class="weight-pct">20%</span></div>
+      <div class="weight-row"><span class="weight-label">기술적</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:20%; background:#c084fc;"></div></div><span class="weight-pct">20%</span></div>
+    </div>
+
+    <h3 style="color:#fff; font-size:15px; margin-top:24px; margin-bottom:8px;">🟢 상승장</h3>
+    <div class="weight-demo">
+      <div class="weight-row"><span class="weight-label">가치</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:15%; background:#FFD700;"></div></div><span class="weight-pct">15%</span></div>
+      <div class="weight-row"><span class="weight-label">성장</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:15%; background:#00E08E;"></div></div><span class="weight-pct">15%</span></div>
+      <div class="weight-row"><span class="weight-label">모멘텀</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:30%; background:#ff4d4d;"></div></div><span class="weight-pct">30%</span></div>
+      <div class="weight-row"><span class="weight-label">수급</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:15%; background:#4d8cff;"></div></div><span class="weight-pct">15%</span></div>
+      <div class="weight-row"><span class="weight-label">기술적</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:25%; background:#c084fc;"></div></div><span class="weight-pct">25%</span></div>
+    </div>
+
+    <h3 style="color:#fff; font-size:15px; margin-top:24px; margin-bottom:8px;">🔴 하락장</h3>
+    <div class="weight-demo">
+      <div class="weight-row"><span class="weight-label">가치</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:30%; background:#FFD700;"></div></div><span class="weight-pct">30%</span></div>
+      <div class="weight-row"><span class="weight-label">성장</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:20%; background:#00E08E;"></div></div><span class="weight-pct">20%</span></div>
+      <div class="weight-row"><span class="weight-label">모멘텀</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:15%; background:#ff4d4d;"></div></div><span class="weight-pct">15%</span></div>
+      <div class="weight-row"><span class="weight-label">수급</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:10%; background:#4d8cff;"></div></div><span class="weight-pct">10%</span></div>
+      <div class="weight-row"><span class="weight-label">기술적</span><div class="weight-bar-track"><div class="weight-bar-fill" style="width:25%; background:#c084fc;"></div></div><span class="weight-pct">25%</span></div>
+    </div>
+  </div>
+
+  <!-- GRADE -->
+  <div class="section">
+    <span class="section-badge" style="background:#FFD70022; color:#FFD700;">GRADE</span>
+    <h2>등급 체계</h2>
+    <p>TSS 점수를 5단계 등급으로 변환합니다.</p>
+
+    <table class="grade-table">
+      <thead>
+        <tr><th>등급</th><th>TSS 점수</th><th>의미</th><th>투자 판단</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="grade-label a">A</span></td><td style="color:#fff; font-weight:700;">80 ~ 100</td><td>매우 양호</td><td style="color:#00E08E;">적극 매수 구간</td></tr>
+        <tr><td><span class="grade-label b">B</span></td><td style="color:#fff; font-weight:700;">65 ~ 79</td><td>양호</td><td style="color:#7dd87d;">매수 유리 구간</td></tr>
+        <tr><td><span class="grade-label c">C</span></td><td style="color:#fff; font-weight:700;">50 ~ 64</td><td>보통</td><td style="color:#f0ad4e;">관망 구간</td></tr>
+        <tr><td><span class="grade-label d">D</span></td><td style="color:#fff; font-weight:700;">35 ~ 49</td><td>취약</td><td style="color:#e87836;">매도 고려 구간</td></tr>
+        <tr><td><span class="grade-label f">F</span></td><td style="color:#fff; font-weight:700;">0 ~ 34</td><td>위험</td><td style="color:#ff4d4d;">매도 / 회피 구간</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="section">
+    <span class="section-badge" style="background:#ff4d4d22; color:#ff4d4d;">SAFETY</span>
+    <h2>5대 안전 필터</h2>
+    <p>TSS 점수만으로는 부족합니다. 아래 5가지 필터 중 <strong>2개 이상 경고</strong>가 뜨면 TSS와 무관하게 관망/회피 판정을 내립니다.</p>
+
+    <div class="filter-list">
+      <div class="filter-item">
+        <div class="filter-icon">📉</div>
+        <div>
+          <div class="filter-name">급락 경고</div>
+          <div class="filter-desc">최근 5일간 -10% 이상 하락하면 작동. 단기 낙폭이 과도한 상태에서 진입하는 위험을 방지합니다.</div>
+        </div>
+      </div>
+      <div class="filter-item">
+        <div class="filter-icon">🔊</div>
+        <div>
+          <div class="filter-name">거래량 이상</div>
+          <div class="filter-desc">거래량이 평균의 5배 이상 급증 + 하락 동시 발생 시 작동. 세력 매도 또는 투매 징후를 포착합니다.</div>
+        </div>
+      </div>
+      <div class="filter-item">
+        <div class="filter-icon">💸</div>
+        <div>
+          <div class="filter-name">과대평가</div>
+          <div class="filter-desc">PER 60배 초과 또는 PBR 10배 초과 시 작동. 실적 대비 주가가 비정상적으로 높은 상태를 경고합니다.</div>
+        </div>
+      </div>
+      <div class="filter-item">
+        <div class="filter-icon">⚡</div>
+        <div>
+          <div class="filter-name">추세 이탈</div>
+          <div class="filter-desc">현재가가 60일 이동평균선보다 10% 이상 아래에 있으면 작동. 중기 추세가 완전히 무너진 상태입니다.</div>
+        </div>
+      </div>
+      <div class="filter-item">
+        <div class="filter-icon">🎢</div>
+        <div>
+          <div class="filter-name">변동성 과다</div>
+          <div class="filter-desc">연간 변동성 60% 초과 시 작동. 하루 등락폭이 과도해 예측 불가능한 상태를 의미합니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA SOURCE -->
+  <div class="section">
+    <span class="section-badge" style="background:#8892a422; color:#8892a4;">DATA</span>
+    <h2>데이터 출처</h2>
+    <p>행운의서동이는 아래 데이터를 실시간으로 수집합니다. 수동 입력이 아닌 API 자동 수집입니다.</p>
+    <ul style="padding-left:16px; font-size:15px;">
+      <li style="margin-bottom:8px;"><strong style="color:#fff;">한국 주식:</strong> 네이버 증권 API — 현재가, 전일대비, 시간외 가격, PER, PBR, EPS, 52주 고/저, 목표가, 1년 일봉 차트</li>
+      <li style="margin-bottom:8px;"><strong style="color:#fff;">미국 주식:</strong> Yahoo Finance API — 현재가, 전일종가, 1년 일봉 차트, 52주 고/저</li>
+      <li><strong style="color:#fff;">갱신 주기:</strong> 분석 실행 시점의 최신 데이터 사용. TOP 20은 장중 10분, 장외 30분마다 자동 갱신</li>
+    </ul>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>직접 분석해보세요</h2>
+    <p style="color:#8892a4; margin-top:8px;">관심 종목의 TSS 점수를 지금 바로 확인하세요.</p>
+    <a href="/" class="cta-btn">종목 분석하러 가기 →</a>
+  </div>
+
+  <div class="footer">
+    본 분석은 투자 참고용이며, 투자 판단의 책임은 본인에게 있습니다.<br>
+    © 2026 행운의서동이. All rights reserved.
+  </div>
+</div>
+
+</body>
+</html>

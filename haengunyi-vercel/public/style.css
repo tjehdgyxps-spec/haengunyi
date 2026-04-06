@@ -627,3 +627,19 @@ body {
   .phase-col, .detail-col { display: none; }
   .top20-title { font-size: 22px; }
 }
+
+/* TSS 방법론 링크 */
+.methodology-link {
+  display: block;
+  text-align: center;
+  color: #8892a4;
+  font-size: 14px;
+  text-decoration: none;
+  margin: 8px auto 20px;
+  padding: 6px 0;
+  transition: color 0.2s;
+}
+.methodology-link:hover {
+  color: #00E08E;
+  text-decoration: underline;
+}
